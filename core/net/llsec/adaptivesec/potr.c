@@ -80,7 +80,7 @@
 #define HELLO_LEN CONTIKIMAC_FRAMER_SHORTEST_PACKET_SIZE
 #endif /* WITH_CONTIKIMAC_FRAMER && (HELLO_LEN < CONTIKIMAC_FRAMER_SHORTEST_PACKET_SIZE) */
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -328,6 +328,8 @@ create(void)
   uint8_t cmd_id;
   uint8_t *p;
   struct akes_nbr_entry *entry;
+
+  PRINTF("creating potr frame\n");
 
   /* Frame Type */
   switch(packetbuf_attr(PACKETBUF_ATTR_FRAME_TYPE)) {

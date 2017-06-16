@@ -1,0 +1,47 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "tasks":[
+        {
+            "taskName": "build",
+            "command": "make",
+            "isShellCommand": true,
+            "args": ["-C", "${fileDirname}"],
+            "showOutput": "always",
+            "isBuildCommand": true
+        },
+        {
+            "taskName": "upload-0",
+            "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
+            "isShellCommand": true,
+            "args": [
+                "-e", 
+                "--bootloader-invert-lines",
+                "-w",
+                "-v",
+                "-b", "450000",
+                "-p", "/dev/ttyUSB0",
+                "-a", "0x00202000",
+                "${fileDirname}/${fileBasenameNoExtension}.bin"
+            ],
+            "showOutput": "always"
+        },
+        {
+            "taskName": "upload-1",
+            "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
+            "isShellCommand": true,
+            "args": [
+                "-e", 
+                "--bootloader-invert-lines",
+                "-w",
+                "-v",
+                "-b", "450000",
+                "-p", "/dev/ttyUSB1",
+                "-a", "0x00202000",
+                "${fileDirname}/${fileBasenameNoExtension}.bin"
+            ],
+            "showOutput": "always"
+        }
+    ]    
+}

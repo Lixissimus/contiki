@@ -46,9 +46,25 @@ AUTOSTART_PROCESSES(&hello_world_process);
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(hello_world_process, ev, data)
 {
+  int i;
   PROCESS_BEGIN();
+  static struct etimer wait_timer;
 
-  printf("Hello, world\n");
+  while(1) {
+    etimer_set(&wait_timer, 5*CLOCK_SECOND);
+
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
+
+    i = 0;
+    while(i < 10) {
+      printf("foo\n");
+      i++;
+    }
+
+
+    printf("Hello, world\n");
+  }
+  
   
   PROCESS_END();
 }
