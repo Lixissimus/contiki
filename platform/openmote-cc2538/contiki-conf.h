@@ -131,9 +131,15 @@ typedef uint32_t rtimer_clock_t;
  *
  * @{
  */
+#ifdef DEBUG_CONF
+#ifndef WATCHDOG_CONF_ENABLE
+#define WATCHDOG_CONF_ENABLE        0 /**< Disable the watchdog timer */
+#endif /* WATCHDOG_CONF_ENABLE */
+#else
 #ifndef WATCHDOG_CONF_ENABLE
 #define WATCHDOG_CONF_ENABLE        1 /**< Enable the watchdog timer */
-#endif
+#endif /* WATCHDOG_CONF_ENABLE */
+#endif /* DEBUG_CONF */
 /** @} */
 /*---------------------------------------------------------------------------*/
 /**
@@ -358,9 +364,15 @@ typedef uint32_t rtimer_clock_t;
  * \name LPM configuration
  * @{
  */
+#ifdef DEBUG_CONF
 #ifndef LPM_CONF_ENABLE
 #define LPM_CONF_ENABLE       0 /**< Set to 0 to disable LPM entirely */
-#endif
+#endif /* LPM_CONF_ENABLE */
+#else
+#ifndef LPM_CONF_ENABLE
+#define LPM_CONF_ENABLE       1
+#endif /* LPM_CONF_ENABLE */
+#endif /* DEBUG_CONF */
 
 /**
  * \brief Maximum PM

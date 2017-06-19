@@ -26,8 +26,8 @@
             "args":["-b115200", "/dev/ttyUSB1"],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            "externalConsole": true,
-            "preLaunchTask": "upload-1"
+            // "preLaunchTask": "upload-1",
+            "externalConsole": true
         },
         {
             "name": "Debug gdb",
@@ -42,7 +42,7 @@
                 "load ${workspaceRoot}/examples/hello-world/hello-world.elf",
                 "break main",
                 "monitor reset"
-            ]            
+            ]
         }
     ]
 }
