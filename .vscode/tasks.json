@@ -12,6 +12,20 @@
             "isBuildCommand": true
         },
         {
+            "taskName": "JLinkGDBServer",
+            "command": "JLinkGDBServer",
+            "isBackground": true,
+            "args": [
+                "-select", "USB",
+                "-device", "CC2538SF53",
+                "-if", "JTAG",
+                "-speed", "1000",
+                "-strict",
+                "-nogui"
+            ],
+            "showOutput": "always"
+        },
+        {
             "taskName": "upload-0",
             "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
             "isShellCommand": true,

@@ -160,9 +160,7 @@ main(void)
   leds_init();
   fade(LEDS_RED);
   process_init();
-#ifndef DEBUG_CONF
-    watchdog_init();
-#endif
+  watchdog_init();
   
 #if UART_CONF_ENABLE
   uart_init(0);
@@ -230,17 +228,13 @@ main(void)
 
   autostart_start(autostart_processes);
 
-#ifndef DEBUG_CONF
   watchdog_start();
-#endif
   fade(LEDS_GREEN);
 
   while(1) {
     uint8_t r;
     do {
-#ifndef DEBUG_CONF
       watchdog_periodic();
-#endif
       r = process_run();
     } while(r > 0);
 
