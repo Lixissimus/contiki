@@ -149,7 +149,16 @@ write_frame_counter(uint8_t *p)
 int
 potr_has_strobe_index(enum potr_frame_type type)
 {
-  return type <= POTR_FRAME_TYPE_ACK;
+  switch(type) {
+    case POTR_FRAME_TYPE_UNICAST_DATA:
+    case POTR_FRAME_TYPE_UNICAST_COMMAND:
+    case POTR_FRAME_TYPE_HELLOACK:
+    case POTR_FRAME_TYPE_HELLOACK_P:
+    case POTR_FRAME_TYPE_ACK:
+      return 1;
+    default:
+      return 0;
+  }
 }
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 /*---------------------------------------------------------------------------*/
@@ -430,14 +439,24 @@ potr_parse_and_validate(void)
   }
 
   /* Frame Type */
-  if(type <= POTR_FRAME_TYPE_ACK) {
+  switch(type) {
+  case POTR_FRAME_TYPE_UNICAST_DATA:
+  case POTR_FRAME_TYPE_UNICAST_COMMAND:
+  case POTR_FRAME_TYPE_HELLOACK:
+  case POTR_FRAME_TYPE_HELLOACK_P:
+  case POTR_FRAME_TYPE_ACK:
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_node_addr);
-  } else if(type <= POTR_FRAME_TYPE_HELLO) {
+    break;
+  case POTR_FRAME_TYPE_BROADCAST_DATA:
+  case POTR_FRAME_TYPE_BROADCAST_COMMAND:
+  case POTR_FRAME_TYPE_HELLO:
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-  } else {
+    break;
+  default:
     PRINTF("potr: unknown frame type %02x\n", type);
     return FRAMER_FAILED;
   }
+
   switch(type) {
   case POTR_FRAME_TYPE_BROADCAST_DATA:
   case POTR_FRAME_TYPE_UNICAST_DATA:
