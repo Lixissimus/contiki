@@ -33,13 +33,13 @@
             "name": "Debug gdb",
             "type": "gdb",
             "request": "attach",
-            "executable": "${workspaceRoot}/examples/hello-world/hello-world.elf",
+            "executable": "${workspaceRoot}/examples/anycast/anycast.elf",
             "target": "localhost:2331",
             "cwd": "${workspaceRoot}",
             "gdbpath": "arm-none-eabi-gdb",
             "remote": true,
             "autorun": [
-                "load ${workspaceRoot}/examples/hello-world/hello-world.elf",
+                "load ${workspaceRoot}/examples/anycast/anycast.elf",
                 "break main",
                 "monitor reset"
             ]

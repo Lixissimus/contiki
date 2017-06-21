@@ -239,5 +239,15 @@ packetbuf_holds_broadcast(void)
   return linkaddr_cmp(&packetbuf->addrs[PACKETBUF_ADDR_RECEIVER - PACKETBUF_ADDR_FIRST].addr, &linkaddr_null);
 }
 /*---------------------------------------------------------------------------*/
+#if POTR_CONF_WITH_ANYCAST
+int
+packetbuf_holds_anycast(void)
+{
+  // print_linkaddr(&packetbuf->addrs[PACKETBUF_ADDR_RECEIVER - PACKETBUF_ADDR_FIRST].addr);
+  // print_linkaddr(&linkaddr_anycast);
+  return linkaddr_cmp(&packetbuf->addrs[PACKETBUF_ADDR_RECEIVER - PACKETBUF_ADDR_FIRST].addr, &linkaddr_anycast);
+}
+#endif /* POTR_CONF_WITH_ANYCAST */
+/*---------------------------------------------------------------------------*/
 
 /** @} */

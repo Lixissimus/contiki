@@ -90,6 +90,12 @@
 #if POTR_ENABLED
 static void read_otp(void);
 
+#if ILOCS_ENABLED
+uint8_t potr_my_broadcast_seqno;
+#if POTR_CONF_WITH_ANYCAST
+uint8_t potr_my_anycast_seqno;
+#endif /* POTR_CONF_WITH_ANYCAST */
+#endif /* ILOCS_ENABLED */
 static uint8_t potr_key[16] = POTR_KEY;
 static potr_otp_t cached_otps[MAX_CACHED_OTPS];
 static uint8_t cached_otps_index;
@@ -104,6 +110,14 @@ potr_set_seqno(struct akes_nbr *receiver)
 {
   packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, ++receiver->my_unicast_seqno);
 }
+/*---------------------------------------------------------------------------*/
+#if POTR_CONF_WITH_ANYCAST
+void
+potr_set_anycast_seqno(void)
+{
+  packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, ++potr_my_anycast_seqno);
+}
+#endif /* POTR_CONF_WITH_ANYCAST */
 /*---------------------------------------------------------------------------*/
 int
 potr_received_duplicate(void)
@@ -321,7 +335,14 @@ create(void)
   /* Frame Type */
   switch(packetbuf_attr(PACKETBUF_ATTR_FRAME_TYPE)) {
   case FRAME802154_DATAFRAME:
-    type = packetbuf_holds_broadcast() ? POTR_FRAME_TYPE_BROADCAST_DATA : POTR_FRAME_TYPE_UNICAST_DATA;
+    if(packetbuf_holds_broadcast()) {
+      type = POTR_FRAME_TYPE_BROADCAST_DATA;
+    } else if(packetbuf_holds_anycast()) {
+      type = POTR_FRAME_TYPE_ANYCAST;
+      printf("potr frame type anycast!!!\n");
+    } else {
+      type = POTR_FRAME_TYPE_UNICAST_DATA;
+    }
     break;
   case FRAME802154_CMDFRAME:
     cmd_id = adaptivesec_get_cmd_id();
@@ -384,6 +405,10 @@ create(void)
       return FRAMER_FAILED;
     }
     memcpy(p, entry->tentative->meta->otp.u8, POTR_OTP_LEN);
+    break;
+  case POTR_FRAME_TYPE_ANYCAST:
+    // Todo: Implement anycast otp here!
+    
     break;
   default:
 #if ILOCS_ENABLED

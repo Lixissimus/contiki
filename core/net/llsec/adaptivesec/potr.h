@@ -83,7 +83,8 @@ enum potr_frame_type {
   POTR_FRAME_TYPE_BROADCAST_DATA,
   POTR_FRAME_TYPE_BROADCAST_COMMAND,
   POTR_FRAME_TYPE_HELLO,
-  POTR_FRAME_TYPE_ACKNOWLEDGEMENT
+  POTR_FRAME_TYPE_ACKNOWLEDGEMENT,
+  POTR_FRAME_TYPE_ANYCAST
 };
 
 typedef union {
@@ -98,6 +99,9 @@ extern const struct framer potr_framer;
 #if !ANTI_REPLAY_WITH_SUPPRESSION
 /*void potr_set_seqno(struct akes_nbr *receiver);*/
 #endif /* !ANTI_REPLAY_WITH_SUPPRESSION */
+#if POTR_CONF_WITH_ANYCAST
+void potr_set_anycast_seqno(void);
+#endif /* POTR_CONF_WITH_ANYCAST */
 int potr_received_duplicate(void);
 void potr_clear_cached_otps(void);
 void potr_create_special_otp(potr_otp_t *result, const linkaddr_t *src, uint8_t *challenge);

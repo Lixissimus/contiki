@@ -99,6 +99,8 @@ void linkaddr_copy(linkaddr_t *dest, const linkaddr_t *from);
  */
 int linkaddr_cmp(const linkaddr_t *addr1, const linkaddr_t *addr2);
 
+void print_linkaddr(linkaddr_t *addr);
+
 
 /**
  * \brief      Set the address of the current node
@@ -132,6 +134,8 @@ extern linkaddr_t linkaddr_node_addr;
  *
  */
 extern const linkaddr_t linkaddr_null;
+
+extern const linkaddr_t linkaddr_anycast;
 
 #endif /* LINKADDR_H_ */
 /** @} */
