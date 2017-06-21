@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2017, Hasso Plattner Institute, Potsdam, Germany.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,70 +32,74 @@
 
 /**
  * \file
- *         Functions for manipulating Rime addresses
+ *         A simple Contiki application for testing anycast support
  * \author
- *         Adam Dunkels <adam@sics.se>
+ *         Felix Wolff <lixissimus@gmail.com>
  */
 
-/**
- * \addtogroup linkaddr
- * @{
- */
+#include "contiki.h"
 
-#include "net/linkaddr.h"
-#include <string.h>
+#include "net/ip/simple-udp.h"
+#include "net/ip/uip.h"
+#include "net/ipv6/uip-anycast.h"
 
 #include <stdio.h>
+#include <string.h>
 
-linkaddr_t linkaddr_node_addr;
-#if LINKADDR_SIZE == 1
-const linkaddr_t linkaddr_null = { { 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe }};
-#elif LINKADDR_SIZE == 2
-const linkaddr_t linkaddr_null = { { 0, 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe, 0xfe }};
-#else /*LINKADDR_SIZE == 2*/
-#if LINKADDR_SIZE == 8
-const linkaddr_t linkaddr_null = { { 0, 0, 0, 0, 0, 0, 0, 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe }};
-// const linkaddr_t linkaddr_anycast = { { 0xef, 0xef, 0xef, 0xef, 0xef, 0xef, 0xef, 0xef }};
-#endif /*LINKADDR_SIZE == 8*/
-#if LINKADDR_SIZE == 6
-const linkaddr_t linkaddr_null = { { 0, 0, 0, 0, 0, 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe}};
-#endif /*LINKADDR_SIZE == 6*/
-#endif /*LINKADDR_SIZE == 2*/
+#define UDP_PORT 1234
+
 
 
 /*---------------------------------------------------------------------------*/
-void
-linkaddr_copy(linkaddr_t *dest, const linkaddr_t *src)
+PROCESS(anycast_process, "Anycast process");
+AUTOSTART_PROCESSES(&anycast_process);
+
+static void
+receiver(struct simple_udp_connection *c,
+         const uip_ipaddr_t *sender_addr,
+         uint16_t sender_port,
+         const uip_ipaddr_t *receiver_addr,
+         uint16_t receiver_port,
+         const uint8_t *data,
+         uint16_t datalen)
 {
-	memcpy(dest, src, LINKADDR_SIZE);
+  printf("Data received on port %d from port %d with length %d\n",
+         receiver_port, sender_port, datalen);
+}
+
+
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(anycast_process, ev, data)
+{
+  static struct simple_udp_connection anycast_connection;
+  static uip_ipaddr_t anycast_addr;
+  static struct etimer wait_timer;
+  static const char *anycast_data = "anycast foo";
+
+  PROCESS_BEGIN();
+
+  /* init the anycast module */
+  init_uip_anycast();
+  create_anycast_addr(&anycast_addr);
+
+  /* register the connection */
+  simple_udp_register(&anycast_connection, UDP_PORT,
+                      NULL, UDP_PORT,
+                      receiver);
+
+  
+  while(1)
+  {
+    etimer_set(&wait_timer, 5*CLOCK_SECOND);
+
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
+    printf("Sending anycast!\n");
+    print_addr(&anycast_addr);
+    simple_udp_sendto(&anycast_connection, anycast_data,
+                      strlen(anycast_data), &anycast_addr);
+    printf("\n");
+  }
+  
+  PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
-int
-linkaddr_cmp(const linkaddr_t *addr1, const linkaddr_t *addr2)
-{
-	return (memcmp(addr1, addr2, LINKADDR_SIZE) == 0);
-}
-/*---------------------------------------------------------------------------*/
-void
-linkaddr_set_node_addr(linkaddr_t *t)
-{
-  linkaddr_copy(&linkaddr_node_addr, t);
-}
-/*---------------------------------------------------------------------------*/
-void
-print_linkaddr(linkaddr_t *addr)
-{
-	printf("lladdr: ");
-	uint8_t i;
-	for(i = 0; i < LINKADDR_SIZE; ++i)
-	{
-		printf("%u:", addr->u8[i]);
-	}
-	printf("\n");
-}
-/*---------------------------------------------------------------------------*/
-/** @} */

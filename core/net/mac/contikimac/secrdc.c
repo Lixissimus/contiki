@@ -271,6 +271,7 @@ static union {
 
   struct {
     int is_broadcast;
+    int is_anycast;
     int result;
     rtimer_clock_t next_transmission;
     rtimer_clock_t timeout;
@@ -948,6 +949,7 @@ PROCESS_THREAD(post_processing, ev, data)
         u.strobe.bf = list_head(buffered_frames_list);
         queuebuf_to_packetbuf(u.strobe.bf->qb);
         u.strobe.is_broadcast = packetbuf_holds_broadcast();
+        u.strobe.is_anycast = packetbuf_holds_anycast();
 
 #if ILOCS_ENABLED
         if(u.strobe.is_broadcast) {
@@ -962,6 +964,11 @@ PROCESS_THREAD(post_processing, ev, data)
           while(!rtimer_is_schedulable(u.strobe.strobe_start, ILOCS_MIN_TIME_TO_STROBE + 1)) {
             u.strobe.strobe_start += 2 * WAKEUP_INTERVAL;
           }
+        } else if(u.strobe.is_anycast) {
+          // Todo: what ist min time to strobe?
+          // Todo: what about acknowledgements?
+          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE;
+          
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
           u.strobe.is_helloack = 1;

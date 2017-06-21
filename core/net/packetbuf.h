@@ -380,6 +380,14 @@ const linkaddr_t *packetbuf_addr(uint8_t type);
  */
 int               packetbuf_holds_broadcast(void);
 
+#if POTR_CONF_WITH_ANYCAST
+/**
+ * \brief      Checks whether the current packet is an anycast.
+ * \retval 0   iff current packet is not an anycast
+ */
+int               packetbuf_holds_anycast(void);
+#endif /* POTR_CONF_WITH_ANYCAST */
+
 void              packetbuf_attr_clear(void);
 
 void              packetbuf_attr_copyto(struct packetbuf_attr *attrs,

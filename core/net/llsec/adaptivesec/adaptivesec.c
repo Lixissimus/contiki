@@ -149,6 +149,8 @@ send(mac_callback_t sent, void *ptr)
   struct akes_nbr_entry *entry;
   struct akes_nbr *receiver;
 
+  PRINTF("linkaddr size: %d\n", LINKADDR_SIZE);
+
   packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_DATAFRAME);
   if(packetbuf_holds_broadcast()) {
     if(!akes_nbr_count(AKES_NBR_PERMANENT)) {
@@ -156,6 +158,11 @@ send(mac_callback_t sent, void *ptr)
       return;
     }
     receiver = NULL;
+  } else if(packetbuf_holds_anycast()) {
+    PRINTF("packetbuf holds anycast\n");
+    potr_set_anycast_seqno();
+    ADAPTIVESEC_STRATEGY.send(sent, ptr);
+    return;
   } else {
     entry = akes_nbr_get_receiver_entry();
     if(!entry || !entry->permanent) {
