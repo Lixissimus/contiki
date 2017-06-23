@@ -85,7 +85,7 @@ on_frame_created(void)
 #endif /* ILOCS_ENABLED */
     } else {
 #if ILOCS_ENABLED
-      key = packetbuf_holds_broadcast()
+      key = packetbuf_holds_broadcast() || packetbuf_holds_anycast()
           ? adaptivesec_group_key
           : entry->permanent->group_key;
       phase = (entry && entry->permanent)

@@ -59,7 +59,7 @@
     | UDMA_CHCTL_SRCINC_8 \
     | UDMA_CHCTL_DSTINC_NONE)
 
-#define DEBUG 0
+#define DEBUG 1
 #include <stdio.h>
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)

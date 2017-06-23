@@ -193,7 +193,7 @@
 #define MAX_ACKNOWLEDGEMENT_LEN ACKNOWLEDGEMENT_LEN
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -975,7 +975,7 @@ PROCESS_THREAD(post_processing, ev, data)
         } else if(u.strobe.is_anycast) {
           // Todo: what ist min time to strobe?
           // Todo: what about acknowledgements?
-          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE;
+          u.strobe.strobe_start = RTIMER_NOW() + 10*ILOCS_MIN_TIME_TO_STROBE;
           
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
@@ -1363,6 +1363,7 @@ strobe(void)
 
       /* schedule next transmission */
       if(!should_strobe_again()) {
+        PRINTF("Stop because of no ack!\n");
         u.strobe.result = MAC_TX_NOACK;
         break;
       }
@@ -1495,7 +1496,11 @@ static void
 on_strobed(void)
 {
 #if DEBUG
-  if(!u.strobe.is_broadcast) {
+  if(u.strobe.is_anycast) {
+    PRINTF("secrdc: strobed anycast %i times, received %sack\n",
+        u.strobe.strobes + 1,
+        u.strobe.result == MAC_TX_OK ? "" : "no ");
+  } else if(!u.strobe.is_broadcast) {
     PRINTF("secrdc: strobed %i times with %s\n",
         u.strobe.strobes + 1,
         (u.strobe.result == MAC_TX_OK) ? "success" : "error");
