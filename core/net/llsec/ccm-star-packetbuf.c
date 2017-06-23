@@ -131,21 +131,33 @@ ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
   
   source_addr = forward ? &linkaddr_node_addr : packetbuf_addr(PACKETBUF_ADDR_SENDER);
+  /* set ID_A of the nonce to be the source address */
   memcpy(nonce, get_extended_address(source_addr), 8);
 #if ILOCS_ENABLED
   hdrptr = packetbuf_hdrptr();
+  /* set the strobe index, if this frame type uses a strobe index */
   nonce[8] = potr_has_strobe_index(hdrptr[0]) ? hdrptr[POTR_HEADER_LEN] : 0;
   if(potr_is_helloack() || potr_is_ack()) {
     count = ilocs_parse_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1);
+    /* alpha = 0 doesn't need to be encoded */
   } else if(packetbuf_holds_broadcast()) {
     count = forward
         ? secrdc_get_wake_up_counter(secrdc_get_next_strobe_start() + SECRDC_WAKEUP_INTERVAL)
         : restore_wake_up_counter(phase);
+    /* store alpha = 3 together with wake-up counter */
     count.u32 += 0xC0000000;
+#if POTR_CONF_WITH_ANYCAST
+  } else if(packetbuf_holds_anycast()) {
+    /* this should be our wake-up counter when we send the next strobe */
+    count = secrdc_get_wake_up_counter(secrdc_get_next_strobe_start());
+    /* store alpha = 4 together with wake-up counter */
+    count.u32 += 0xE0000000;
+#endif /* POTR_CONF_WITH_ANYCAST */
   } else {
     count = forward
         ? ccm_star_packetbuf_predict_wake_up_counter(phase)
         : secrdc_get_wake_up_counter(secrdc_get_last_wake_up_time());
+    /* store alpha = 1 together with wake-up counter */
     count.u32 += 0x40000000;
   }
   ilocs_write_wake_up_counter(nonce + 9, count);

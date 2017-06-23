@@ -185,6 +185,7 @@ potr_has_strobe_index(enum potr_frame_type type)
     case POTR_FRAME_TYPE_HELLOACK:
     case POTR_FRAME_TYPE_HELLOACK_P:
     case POTR_FRAME_TYPE_ACK:
+    case POTR_FRAME_TYPE_ANYCAST:
       return 1;
     default:
       return 0;
@@ -341,6 +342,26 @@ create_normal_otp(uint8_t *p, uint8_t *group_key)
 }
 #endif /* ILOCS_ENABLED */
 /*---------------------------------------------------------------------------*/
+#if POTR_CONF_WITH_ANYCAST
+static void
+create_anycast_otp(uint8_t *p, int forward, uint8_t *nonce)
+{
+  uint8_t block[AES_128_BLOCK_SIZE];
+  uint8_t *group_key;
+
+  memset(block, 0, AES_128_BLOCK_SIZE);
+  ccm_star_packetbuf_set_nonce(block, forward, NULL);
+  if(nonce) {
+    memcpy(nonce, block, CCM_STAR_NONCE_LENGTH);
+  }
+
+  /* for sending anycast, we always use our own group key, right? */
+  group_key = adaptivesec_group_key;
+
+  do_create_normal_otp(p, group_key, block);
+}
+#endif /* POTR_CONF_WITH_ANYCAST */
+/*---------------------------------------------------------------------------*/
 static int
 create(void)
 {
@@ -385,7 +406,10 @@ create(void)
     return FRAMER_FAILED;
   }
   p = packetbuf_hdrptr();
-  entry = akes_nbr_get_receiver_entry();
+  /* Todo: should there be a neighbor entry for anycasts? */
+  if (type != POTR_FRAME_TYPE_ANYCAST) {
+    entry = akes_nbr_get_receiver_entry();
+  }
   p[0] = type;
   p += 1;
 
@@ -425,10 +449,14 @@ create(void)
     }
     memcpy(p, entry->tentative->meta->otp.u8, POTR_OTP_LEN);
     break;
+#if POTR_CONF_WITH_ANYCAST
   case POTR_FRAME_TYPE_ANYCAST:
-    // Todo: Implement anycast otp here!
-    
+    /* Todo: not sure about 1 for forward, also is NULL for nonce useful? */
+    PRINTF("about to create anycast otp... ");
+    create_anycast_otp(p, 1, NULL);
+    PRINTF("done!\n");
     break;
+#endif /* POTR_CONF_WITH_ANYCAST */
   default:
 #if ILOCS_ENABLED
     create_normal_otp(p, 1, entry, NULL);
@@ -440,6 +468,7 @@ create(void)
   p += POTR_OTP_LEN;
 
 #if SECRDC_WITH_SECURE_PHASE_LOCK
+  /* Todo: Why resetting strobe index? */
   if(potr_has_strobe_index(type)) {
     p[0] = 0;
     p += 1;
