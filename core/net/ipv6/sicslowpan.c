@@ -72,9 +72,9 @@
 
 #include <stdio.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #include "net/ip/uip-debug.h"
-#if DEBUG
+#if DEBUG && MAIN_DEBUG_CONF
 /* PRINTFI and PRINTFO are defined for input and output to debug one without changing the timing of the other */
 uint8_t p;
 #include <stdio.h>
@@ -1318,6 +1318,9 @@ output(const uip_lladdr_t *localdest)
    */
   if(localdest == NULL) {
     linkaddr_copy(&dest, &linkaddr_null);
+  } else if(linkaddr_cmp((const linkaddr_t *)localdest, &linkaddr_anycast)) {
+    PRINTF("sicslowpan output: detected anycast\n");
+    linkaddr_copy(&dest, &linkaddr_anycast);
   } else {
     linkaddr_copy(&dest, (const linkaddr_t *)localdest);
   }
@@ -1631,8 +1634,16 @@ input(void)
       break;
     default:
       /* unknown header */
-      PRINTFI("sicslowpan input: unknown dispatch: %u\n",
-             PACKETBUF_HC1_PTR[PACKETBUF_HC1_DISPATCH]);
+      PRINTFI("sicslowpan input: unknown dispatch: %02x, %02x\n",
+             PACKETBUF_HC1_PTR[PACKETBUF_HC1_DISPATCH],
+             PACKETBUF_HC1_PTR[PACKETBUF_HC1_DISPATCH+1]);
+      // uint8_t *ptr;
+      // ptr = packetbuf_dataptr();
+      // PRINTFI("sicslowpan input: unknown dispatch: %02x, %02x, %02x, %02x\n",
+      //        ptr[PACKETBUF_HC1_DISPATCH-4],
+      //        ptr[PACKETBUF_HC1_DISPATCH-2],
+      //        ptr[PACKETBUF_HC1_DISPATCH],
+      //        ptr[PACKETBUF_HC1_DISPATCH+2]);
       return;
   }
 

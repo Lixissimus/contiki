@@ -193,8 +193,10 @@
 #define MAX_ACKNOWLEDGEMENT_LEN ACKNOWLEDGEMENT_LEN
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
+#include <stdio.h>
+
 #define DEBUG 1
-#if DEBUG
+#if DEBUG && MAIN_DEBUG_CONF
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else /* DEBUG */
@@ -279,7 +281,9 @@ static union {
 
   struct {
     int is_broadcast;
+#if POTR_CONF_WITH_ANYCAST
     int is_anycast;
+#endif /* POTR_CONF_WITH_ANYCAST */
     int result;
     rtimer_clock_t next_transmission;
     rtimer_clock_t timeout;
@@ -716,6 +720,7 @@ prepare_acknowledgement(void)
 static void
 on_final_fifop(void)
 {
+  // printf("on final fifop\n");
   if(is_duty_cycling) {
     /* avoid that on_final_fifop is called twice */
     NETSTACK_RADIO_ASYNC.set_object(RADIO_PARAM_FIFOP_CALLBACK, NULL, 0);
@@ -909,6 +914,28 @@ secrdc_get_wake_up_counter(rtimer_clock_t t)
 
   return result;
 }
+/*---------------------------------------------------------------------------*/
+#if POTR_CONF_WITH_ANYCAST
+void
+specialize_anycast_frame_type(uint8_t *p, rtimer_clock_t t)
+{
+  uint8_t type;
+  if (secrdc_get_wake_up_counter(t).u32 & 1) {
+    if ((rtimer_delta(my_wake_up_counter_last_increment, t) % WAKEUP_INTERVAL) < (WAKEUP_INTERVAL / 2)) {
+      type = POTR_FRAME_TYPE_ANYCAST_ODD_0;
+    } else {
+      type = POTR_FRAME_TYPE_ANYCAST_ODD_1;
+    }
+  } else {
+    if ((rtimer_delta(my_wake_up_counter_last_increment, t) % WAKEUP_INTERVAL) < (WAKEUP_INTERVAL / 2)) {
+      type = POTR_FRAME_TYPE_ANYCAST_EVEN_0;
+    } else {
+      type = POTR_FRAME_TYPE_ANYCAST_EVEN_1;
+    }
+  }
+  p[0] = type;
+}
+#endif /* POTR_CONF_WITH_ANYCAST */
 #endif /* ILOCS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 /*---------------------------------------------------------------------------*/
@@ -943,6 +970,9 @@ PROCESS_THREAD(post_processing, ev, data)
       } else {
         NETSTACK_RADIO_ASYNC.read_footer();
         just_received_broadcast = packetbuf_holds_broadcast();
+        // if(packetbuf_holds_anycast()) {
+        //   packetbuf_print();
+        // }
         NETSTACK_MAC.input();
       }
       disable_local_packetbuf();
@@ -957,7 +987,9 @@ PROCESS_THREAD(post_processing, ev, data)
         u.strobe.bf = list_head(buffered_frames_list);
         queuebuf_to_packetbuf(u.strobe.bf->qb);
         u.strobe.is_broadcast = packetbuf_holds_broadcast();
+#if POTR_CONF_WITH_ANYCAST
         u.strobe.is_anycast = packetbuf_holds_anycast();
+#endif /* POTR_CONF_WITH_ANYCAST */
 
 #if ILOCS_ENABLED
         if(u.strobe.is_broadcast) {
@@ -973,10 +1005,10 @@ PROCESS_THREAD(post_processing, ev, data)
             u.strobe.strobe_start += 2 * WAKEUP_INTERVAL;
           }
         } else if(u.strobe.is_anycast) {
-          // Todo: what ist min time to strobe?
           // Todo: what about acknowledgements?
-          u.strobe.strobe_start = RTIMER_NOW() + 10*ILOCS_MIN_TIME_TO_STROBE;
-          
+          u.strobe.strobe_start = RTIMER_NOW() + 30*ILOCS_MIN_TIME_TO_STROBE;
+          specialize_anycast_frame_type(packetbuf_hdrptr(), u.strobe.strobe_start);
+          packetbuf_print();
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
           u.strobe.is_helloack = 1;
@@ -1496,11 +1528,14 @@ static void
 on_strobed(void)
 {
 #if DEBUG
+#if POTR_CONF_WITH_ANYCAST
   if(u.strobe.is_anycast) {
     PRINTF("secrdc: strobed anycast %i times, received %sack\n",
         u.strobe.strobes + 1,
         u.strobe.result == MAC_TX_OK ? "" : "no ");
-  } else if(!u.strobe.is_broadcast) {
+  } else 
+#endif /* POTR_CONF_WITH_ANYCAST */
+  if(!u.strobe.is_broadcast) {
     PRINTF("secrdc: strobed %i times with %s\n",
         u.strobe.strobes + 1,
         (u.strobe.result == MAC_TX_OK) ? "success" : "error");

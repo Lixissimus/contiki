@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = anycast
+CONTIKI_PROJECT = anycast anycast-rec
 all: $(CONTIKI_PROJECT)
 
 # CFLAGS += -O0

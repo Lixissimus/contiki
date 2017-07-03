@@ -80,7 +80,7 @@
 #endif /* WITH_CONTIKIMAC_FRAMER && (HELLO_LEN < CONTIKIMAC_FRAMER_SHORTEST_PACKET_SIZE) */
 
 #define DEBUG 1
-#if DEBUG
+#if DEBUG && MAIN_DEBUG_CONF
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else /* DEBUG */
@@ -170,6 +170,10 @@ potr_has_strobe_index(enum potr_frame_type type)
     case POTR_FRAME_TYPE_HELLOACK_P:
     case POTR_FRAME_TYPE_ACK:
     case POTR_FRAME_TYPE_ANYCAST:
+    case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+    case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+    case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+    case POTR_FRAME_TYPE_ANYCAST_ODD_1:
       return 1;
     default:
       return 0;
@@ -183,6 +187,11 @@ has_seqno(enum potr_frame_type type)
   switch(type) {
   case POTR_FRAME_TYPE_UNICAST_DATA:
   case POTR_FRAME_TYPE_UNICAST_COMMAND:
+  case POTR_FRAME_TYPE_ANYCAST:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_1:
     return 1;
   case POTR_FRAME_TYPE_HELLOACK:
   case POTR_FRAME_TYPE_HELLOACK_P:
@@ -233,9 +242,13 @@ potr_length_of(enum potr_frame_type type)
 static int
 length(void)
 {
-  return potr_length_of(packetbuf_holds_broadcast()
-      ? POTR_FRAME_TYPE_BROADCAST_DATA
-      : POTR_FRAME_TYPE_UNICAST_DATA);
+  if(packetbuf_holds_broadcast()) {
+    return potr_length_of(POTR_FRAME_TYPE_BROADCAST_DATA);
+  } else if(packetbuf_holds_anycast()) {
+    return potr_length_of(POTR_FRAME_TYPE_ANYCAST);
+  }
+
+  return potr_length_of(POTR_FRAME_TYPE_UNICAST_DATA);
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -287,6 +300,10 @@ create_normal_otp(uint8_t *p, int forward, void *entry)
       (entry && ((struct akes_nbr_entry *)entry)->permanent)
           ? &((struct akes_nbr_entry *)entry)->permanent->phase
           : NULL);
+  if(nonce) {
+    memcpy(nonce, block, CCM_STAR_NONCE_LENGTH);
+  }
+  /* because we dont use strobe index in OTP */
   block[8] = 0x00;
 
   if(forward) {
@@ -325,7 +342,7 @@ create_normal_otp(uint8_t *p, uint8_t *group_key)
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
 static void
-create_anycast_otp(uint8_t *p, int forward, uint8_t *nonce)
+create_anycast_otp(uint8_t *p, int forward, void *entry, uint8_t *nonce)
 {
   uint8_t block[AES_128_BLOCK_SIZE];
   uint8_t *group_key;
@@ -335,9 +352,22 @@ create_anycast_otp(uint8_t *p, int forward, uint8_t *nonce)
   if(nonce) {
     memcpy(nonce, block, CCM_STAR_NONCE_LENGTH);
   }
+  /* because we dont use strobe index in OTP */
+  block[8] = 0x00;
 
-  /* for sending anycast, we always use our own group key, right? */
-  group_key = adaptivesec_group_key;
+  if (forward) {
+
+    /* for sending anycast, we use our own group key */
+    group_key = adaptivesec_group_key;
+  } else {
+    /* 
+     * Todo: create otp with respect to specific type.
+     * Maybe separate function restore_anycast_otp?
+     */
+
+    /* when receiving anycast, we use the senders group key */
+    group_key = ((struct akes_nbr_entry *)entry)->permanent->group_key;
+  }
 
   do_create_normal_otp(p, group_key, block);
 }
@@ -387,7 +417,7 @@ create(void)
     return FRAMER_FAILED;
   }
   p = packetbuf_hdrptr();
-  /* Todo: should there be a neighbor entry for anycasts? */
+  /* there is no neighbor for anycasts */
   if (type != POTR_FRAME_TYPE_ANYCAST) {
     entry = akes_nbr_get_receiver_entry();
   }
@@ -432,9 +462,8 @@ create(void)
     break;
 #if POTR_CONF_WITH_ANYCAST
   case POTR_FRAME_TYPE_ANYCAST:
-    /* Todo: not sure about 1 for forward, also is NULL for nonce useful? */
     PRINTF("about to create anycast otp... ");
-    create_anycast_otp(p, 1, NULL);
+    create_anycast_otp(p, 1, NULL, NULL);
     PRINTF("done!\n");
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
@@ -449,7 +478,6 @@ create(void)
   p += POTR_OTP_LEN;
 
 #if SECRDC_WITH_SECURE_PHASE_LOCK
-  /* Todo: Why resetting strobe index? */
   if(potr_has_strobe_index(type)) {
     p[0] = 0;
     p += 1;
@@ -506,6 +534,16 @@ potr_parse_and_validate(void)
   case POTR_FRAME_TYPE_HELLO:
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
     break;
+#if POTR_CONF_WITH_ANYCAST
+  case POTR_FRAME_TYPE_ANYCAST:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_1:
+    PRINTF("potr: anycast frame type\n");
+    packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_anycast);
+    break;
+#endif /* POTR_CONF_WITH_ANYCAST */
   default:
     PRINTF("potr: unknown frame type %02x\n", type);
     return FRAMER_FAILED;
@@ -514,6 +552,11 @@ potr_parse_and_validate(void)
   switch(type) {
   case POTR_FRAME_TYPE_BROADCAST_DATA:
   case POTR_FRAME_TYPE_UNICAST_DATA:
+  case POTR_FRAME_TYPE_ANYCAST:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_1:
     packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_DATAFRAME);
     break;
   default:
@@ -604,6 +647,29 @@ potr_parse_and_validate(void)
        */
     }
     break;
+#if POTR_CONF_WITH_ANYCAST
+  case POTR_FRAME_TYPE_ANYCAST:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_1:
+    if (!entry || !entry->permanent) {
+      PRINTF("potr: Anycast sender is not permanent\n");
+      return FRAMER_FAILED;
+    }
+    create_anycast_otp(otp.u8, 0, entry, nonce);
+    read_otp();
+
+    if(memcmp(otp.u8, p, POTR_OTP_LEN)) {
+      PRINTF("potr: Invalid anycast OTP\n");
+      return FRAMER_FAILED;
+    } else {
+      PRINTF("potr: Valid anycast OTP\n");
+    }
+    /* Todo: check nonce for replay protection */
+
+    break;
+#endif /* POTR_CONF_WITH_ANYCAST */
   case POTR_FRAME_TYPE_HELLO:
     if((packetbuf_totlen() != HELLO_LEN)
         || !akes_is_acceptable_hello(entry)) {
@@ -660,6 +726,31 @@ potr_parse_and_validate(void)
   }
   p += POTR_OTP_LEN;
 
+#if ILOCS_ENABLED
+  switch(type) {
+  case POTR_FRAME_TYPE_HELLO:
+    if(invalid_hello_otp) {
+      break;
+    }
+  case POTR_FRAME_TYPE_BROADCAST_DATA:
+  case POTR_FRAME_TYPE_BROADCAST_COMMAND:
+    if(entry && entry->permanent) {
+      NETSTACK_RADIO_ASYNC.read_payload(1);
+      if(p[0] == entry->permanent->his_broadcast_seqno) {
+        PRINTF("potr: Duplicate\n");
+        return FRAMER_FAILED;
+      }
+    }
+    break;
+  default:
+    break;
+  }
+#endif /* ILOCS_ENABLED */
+
+  // if (packetbuf_holds_anycast()) {
+  //   packetbuf_print();
+  // }
+
   return potr_length_of(type);
 }
 /*---------------------------------------------------------------------------*/
@@ -684,6 +775,7 @@ parse(void)
     packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, hdrptr[len - 1]);
   }
 
+  // Todo: PRINTF("...", packetbuf_dataptr())
   if(!packetbuf_hdrreduce(len)) {
     PRINTF("potr: packetbuf_hdrreduce failed\n");
     return FRAMER_FAILED;

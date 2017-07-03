@@ -51,6 +51,7 @@
 
 struct packetbuf temp;
 struct packetbuf *packetbuf = &temp;
+#include <stdio.h>
 
 #define DEBUG 0
 #if DEBUG
@@ -243,11 +244,20 @@ packetbuf_holds_broadcast(void)
 int
 packetbuf_holds_anycast(void)
 {
-  // print_linkaddr(&packetbuf->addrs[PACKETBUF_ADDR_RECEIVER - PACKETBUF_ADDR_FIRST].addr);
-  // print_linkaddr(&linkaddr_anycast);
   return linkaddr_cmp(&packetbuf->addrs[PACKETBUF_ADDR_RECEIVER - PACKETBUF_ADDR_FIRST].addr, &linkaddr_anycast);
 }
 #endif /* POTR_CONF_WITH_ANYCAST */
+/*---------------------------------------------------------------------------*/
+void
+packetbuf_print(void)
+{
+  printf("packetbuf: ");
+  int i;
+  for(i = 0; i < PACKETBUF_SIZE; ++i) {
+    printf("%02x", packetbuf->data[i]);
+  }
+  printf("\n");
+}
 /*---------------------------------------------------------------------------*/
 
 /** @} */

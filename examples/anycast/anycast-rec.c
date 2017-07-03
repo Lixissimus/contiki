@@ -44,15 +44,14 @@
 #include "net/ipv6/uip-anycast.h"
 
 #include <stdio.h>
-#include <string.h>
 
 #define UDP_PORT 1234
 
 
 
 /*---------------------------------------------------------------------------*/
-PROCESS(anycast_process, "Anycast process");
-AUTOSTART_PROCESSES(&anycast_process);
+PROCESS(anycast_rec_process, "Anycast receiver process");
+AUTOSTART_PROCESSES(&anycast_rec_process);
 
 static void
 receiver(struct simple_udp_connection *c,
@@ -69,35 +68,24 @@ receiver(struct simple_udp_connection *c,
 
 
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(anycast_process, ev, data)
+PROCESS_THREAD(anycast_rec_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
-  static uip_ipaddr_t anycast_addr;
-  static struct etimer wait_timer;
-  static const char *anycast_data = "anycast foo";
 
   PROCESS_BEGIN();
 
   /* init the anycast module */
   init_uip_anycast();
-  create_anycast_addr(&anycast_addr);
 
   /* register the connection */
   simple_udp_register(&anycast_connection, UDP_PORT,
                       NULL, UDP_PORT,
                       receiver);
 
-  
+  printf("Hello from anycast receiver\n");
   while(1)
   {
-    etimer_set(&wait_timer, 40*CLOCK_SECOND);
-
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
-    printf("Sending anycast!\n");
-    print_addr(&anycast_addr);
-    simple_udp_sendto(&anycast_connection, anycast_data,
-                      strlen(anycast_data), &anycast_addr);
-    printf("\n");
+    PROCESS_WAIT_EVENT();
   }
   
   PROCESS_END();
