@@ -959,9 +959,12 @@ input_packet(void)
   if(packetbuf_totlen() > 0 && NETSTACK_FRAMER.parse() >= 0) {
     if(packetbuf_datalen() > 0 &&
        packetbuf_totlen() > 0 &&
-       (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-                     &linkaddr_node_addr) ||
-        packetbuf_holds_broadcast())) {
+       (linkaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), &linkaddr_node_addr) ||
+       packetbuf_holds_broadcast() 
+#if POTR_CONF_WITH_ANYCAST
+       || packetbuf_holds_anycast()
+#endif /* POTR_CONF_WITH_ANYCAST */
+       )) {
       /* This is a regular packet that is destined to us or to the
          broadcast address. */
 

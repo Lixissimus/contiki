@@ -564,7 +564,7 @@ tcpip_ipv6_output(void)
 
 #if POTR_CONF_WITH_ANYCAST
   if(uip_is_anycast_addr(&UIP_IP_BUF->destipaddr)) {
-    printf("scpip_ipv6_output: Output Anycast\n");
+    printf("tcpip_ipv6_output: Output Anycast\n");
     
     uip_lladdr_t anycast_ll_addr;
     uip_create_ll_anycast_addr(&anycast_ll_addr);

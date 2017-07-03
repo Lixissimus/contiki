@@ -323,6 +323,7 @@ static void
 input(void)
 {
   struct akes_nbr_entry *entry;
+  PRINTF("adaptivesec: input called\n");
 
 #if LLSEC802154_USES_AUX_HEADER && POTR_ENABLED
   packetbuf_set_attr(PACKETBUF_ATTR_SECURITY_LEVEL, adaptivesec_get_sec_lvl());

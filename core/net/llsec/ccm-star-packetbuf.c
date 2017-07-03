@@ -115,6 +115,16 @@ restore_wake_up_counter(struct secrdc_phase *phase)
 }
 #endif /* ILOCS_ENABLED */
 /*---------------------------------------------------------------------------*/
+#if POTR_CONF_WITH_ANYCAST
+static ilocs_wake_up_counter_t
+restore_anycast_wakeup_counter(struct secrdc_phase *phase)
+{
+  ilocs_wake_up_counter_t count;
+  
+  return count;
+}
+#endif /* POTR_CONF_WITH_ANYCAST */
+/*---------------------------------------------------------------------------*/
 void
 ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
 #if ILOCS_ENABLED
@@ -148,8 +158,17 @@ ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
     count.u32 += 0xC0000000;
 #if POTR_CONF_WITH_ANYCAST
   } else if(packetbuf_holds_anycast()) {
-    /* this should be our wake-up counter when we send the next strobe */
-    count = secrdc_get_wake_up_counter(secrdc_get_next_strobe_start());
+    if (forward) {
+      /* this should be our wake-up counter when we send the next strobe */
+      count = secrdc_get_wake_up_counter(secrdc_get_next_strobe_start());
+    } else {
+      /* we are receiving */
+      /* Todo: actually implement this! */
+      count = restore_anycast_wakeup_counter(phase);
+    }
+    /* for testing purpose */
+    count.u32 = 123;
+    
     /* store alpha = 4 together with wake-up counter */
     count.u32 += 0xE0000000;
 #endif /* POTR_CONF_WITH_ANYCAST */

@@ -387,6 +387,7 @@ int               packetbuf_holds_broadcast(void);
  */
 int               packetbuf_holds_anycast(void);
 #endif /* POTR_CONF_WITH_ANYCAST */
+void packetbuf_print(void);
 
 void              packetbuf_attr_clear(void);
 

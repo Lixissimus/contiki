@@ -56,7 +56,7 @@
 #define MAX_HELLOACK_RATE (60 * CLOCK_SECOND) /* 1 HELOACK per 1min */
 #endif /* AKES_CONF_MAX_HELLOACK_RATE */
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
