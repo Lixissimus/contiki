@@ -90,7 +90,7 @@ PROCESS_THREAD(anycast_process, ev, data)
   
   while(1)
   {
-    etimer_set(&wait_timer, 40*CLOCK_SECOND);
+    etimer_set(&wait_timer, 10*CLOCK_SECOND);
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
     printf("Sending anycast!\n");

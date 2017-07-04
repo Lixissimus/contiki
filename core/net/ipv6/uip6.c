@@ -80,6 +80,8 @@
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/multicast/uip-mcast6.h"
 
+#include "net/ipv6/uip-anycast.h"
+
 #if UIP_CONF_IPV6_RPL
 #include "rpl/rpl.h"
 #include "rpl/rpl-private.h"
@@ -1217,8 +1219,10 @@ uip_process(uint8_t flag)
 #endif /* UIP_IPV6_MULTICAST */
 
   /* TBD Some Parameter problem messages */
+
   if(!uip_ds6_is_my_addr(&UIP_IP_BUF->destipaddr) &&
-     !uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr)) {
+     !uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr) &&
+     !uip_is_anycast_addr(&UIP_IP_BUF->destipaddr)) {
     if(!uip_is_addr_mcast(&UIP_IP_BUF->destipaddr) &&
        !uip_is_addr_linklocal(&UIP_IP_BUF->destipaddr) &&
        !uip_is_addr_linklocal(&UIP_IP_BUF->srcipaddr) &&

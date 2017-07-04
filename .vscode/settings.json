@@ -49,6 +49,20 @@
         "secrdc.c": "cpp",
         "simple-udp.h": "c",
         "ecc-driver.h": "c",
-        "potr.h": "c"
+        "potr.h": "c",
+        "linkaddr.h": "c",
+        "clock.h": "c",
+        "contikimac-framer.h": "c",
+        "nullradioasync.c": "cpp",
+        "cc2538-rf-async.c": "cpp",
+        "packetbuf.c": "cpp",
+        "tcpip.h": "c",
+        "er-coap.h": "c",
+        "frame802154.h": "c",
+        "tsch-slot-operation.h": "c",
+        "if_link.h": "c",
+        "queuebuf.h": "c",
+        "er-coap-transactions.h": "c",
+        "uip-packetqueue.h": "c"
     }
 }
