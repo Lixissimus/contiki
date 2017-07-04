@@ -187,7 +187,7 @@
 
 #include <stdio.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG && MAIN_DEBUG_CONF
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -999,8 +999,7 @@ PROCESS_THREAD(post_processing, ev, data)
         } else if(u.strobe.is_anycast) {
           // Todo: what about acknowledgements?
           u.strobe.strobe_start = RTIMER_NOW() + 30*ILOCS_MIN_TIME_TO_STROBE;
-          specialize_anycast_frame_type(packetbuf_hdrptr(), u.strobe.strobe_start);
-          packetbuf_print();
+          // specialize_anycast_frame_type(packetbuf_hdrptr(), u.strobe.strobe_start);
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
           u.strobe.is_helloack = 1;

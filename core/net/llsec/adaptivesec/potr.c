@@ -260,10 +260,12 @@ length(void)
 {
   if(packetbuf_holds_broadcast()) {
     return potr_length_of(POTR_FRAME_TYPE_BROADCAST_DATA);
-  } else if(packetbuf_holds_anycast()) {
+  }
+  
+  if(packetbuf_holds_anycast()) {
     return potr_length_of(POTR_FRAME_TYPE_ANYCAST);
   }
-
+  
   return potr_length_of(POTR_FRAME_TYPE_UNICAST_DATA);
 }
 /*---------------------------------------------------------------------------*/
@@ -396,8 +398,6 @@ create(void)
   uint8_t cmd_id;
   uint8_t *p;
   struct akes_nbr_entry *entry;
-
-  PRINTF("creating potr frame\n");
 
   /* Frame Type */
   switch(packetbuf_attr(PACKETBUF_ATTR_FRAME_TYPE)) {

@@ -17,14 +17,6 @@ init_uip_anycast()
     anycast_ll_addr.addr[5] = 0xfe;
     anycast_ll_addr.addr[6] = 0xfe;
     anycast_ll_addr.addr[7] = 0xfe;
-    // anycast_ll_addr.addr[0] = 0x00;
-    // anycast_ll_addr.addr[1] = 0x12;
-    // anycast_ll_addr.addr[2] = 0x4b;
-    // anycast_ll_addr.addr[3] = 0x00;
-    // anycast_ll_addr.addr[4] = 0x04;
-    // anycast_ll_addr.addr[5] = 0x30;
-    // anycast_ll_addr.addr[6] = 0x53;
-    // anycast_ll_addr.addr[7] = 0x2f;
     
 }
 
