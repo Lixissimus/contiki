@@ -266,6 +266,9 @@ static union {
     int read_and_parsed;
     int is_helloack;
     int is_ack;
+#if POTR_CONF_WITH_ANYCAST
+    int is_anycast;
+#endif /* POTR_CONF_WITH_ANYCAST */
     uint8_t acknowledgement[MAX_ACKNOWLEDGEMENT_LEN];
     uint8_t acknowledgement_len;
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
@@ -648,6 +651,9 @@ on_fifop(void)
 #if SECRDC_WITH_SECURE_PHASE_LOCK
         u.duty_cycle.is_helloack = potr_is_helloack();
         u.duty_cycle.is_ack = potr_is_ack();
+#if POTR_CONF_WITH_ANYCAST
+        u.duty_cycle.is_anycast = potr_is_anycast();
+#endif /* POTR_CONF_WITH_ANYCAST */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
         if(u.duty_cycle.shall_send_acknowledgement) {
@@ -681,7 +687,16 @@ prepare_acknowledgement(void)
     memcpy(u.duty_cycle.acknowledgement + 1, last_random_number, AKES_NBR_CHALLENGE_LEN);
     NETSTACK_RADIO_ASYNC.prepare(u.duty_cycle.acknowledgement, HELLOACK_ACKNOWLEDGEMENT_LEN);
     return;
-  } else {
+  } else
+#if POTR_CONF_WITH_ANYCAST
+  if(u.duty_cycle.is_anycast) {
+    /* delta make no sense for anycasts */
+    u.duty_cycle.acknowledgement[1] = 0;
+    u.duty_cycle.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
+    create_acknowledgement_mic();
+  } else 
+#endif /* POTR_CONF_WITH_ANYCAST */
+  {
     u.duty_cycle.acknowledgement[1] = secrdc_get_last_delta();
     if(u.duty_cycle.is_ack) {
 #if ILOCS_ENABLED
@@ -712,7 +727,6 @@ prepare_acknowledgement(void)
 static void
 on_final_fifop(void)
 {
-  // printf("on final fifop\n");
   if(is_duty_cycling) {
     /* avoid that on_final_fifop is called twice */
     NETSTACK_RADIO_ASYNC.set_object(RADIO_PARAM_FIFOP_CALLBACK, NULL, 0);
@@ -753,7 +767,9 @@ create_acknowledgement_mic(void)
       , NULL
 #endif /* ILOCS_ENABLED */
   );
+  // printf("nonce: %d\n", nonce[11]);
   ccm_star_packetbuf_to_acknowledgement_nonce(nonce);
+  // printf("nonce (after): %d\n", nonce[11]);
   CCM_STAR.aead(nonce,
       NULL, 0,
       u.duty_cycle.acknowledgement,
@@ -762,6 +778,14 @@ create_acknowledgement_mic(void)
       ADAPTIVESEC_UNICAST_MIC_LEN,
       1);
   AES_128_RELEASE_LOCK();
+  // uint8_t i;
+  // printf("key: ");
+  // for(i = 0; i < 4; ++i) {
+  //   printf("%d", akes_nbr_get_sender_entry()->permanent->group_key[i]);
+  // }
+  // printf("\n");
+  /*printf("mic: %02x%02x\n", *(u.duty_cycle.acknowledgement + u.duty_cycle.acknowledgement_len - ADAPTIVESEC_UNICAST_MIC_LEN),
+    *(u.duty_cycle.acknowledgement + u.duty_cycle.acknowledgement_len - ADAPTIVESEC_UNICAST_MIC_LEN + 1));*/
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -997,8 +1021,9 @@ PROCESS_THREAD(post_processing, ev, data)
             u.strobe.strobe_start += 2 * WAKEUP_INTERVAL;
           }
         } else if(u.strobe.is_anycast) {
-          // Todo: what about acknowledgements?
           u.strobe.strobe_start = RTIMER_NOW() + 30*ILOCS_MIN_TIME_TO_STROBE;
+          u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
+          akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
           // specialize_anycast_frame_type(packetbuf_hdrptr(), u.strobe.strobe_start);
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
@@ -1338,6 +1363,9 @@ strobe(void)
       /* wait for acknowledgement */
       schedule_strobe(RTIMER_NOW() + ACKNOWLEDGEMENT_WINDOW_MAX);
       PT_YIELD(&pt);
+      // if (u.strobe.is_anycast) {
+        // printf("waiting for ack...\n");
+      // }
       if(NETSTACK_RADIO_ASYNC.receiving_packet() || NETSTACK_RADIO_ASYNC.pending_packet()) {
         if(NETSTACK_RADIO_ASYNC.read_phy_header() != EXPECTED_ACKNOWLEDGEMENT_LEN) {
           PRINTF("secrdc: unexpected frame\n");
@@ -1381,7 +1409,6 @@ strobe(void)
 
       /* schedule next transmission */
       if(!should_strobe_again()) {
-        PRINTF("Stop because of no ack!\n");
         u.strobe.result = MAC_TX_NOACK;
         break;
       }
@@ -1493,13 +1520,23 @@ is_valid(uint8_t *acknowledgement)
   memcpy(nonce, u.strobe.nonce, CCM_STAR_NONCE_LENGTH);
   AES_128_GET_LOCK();
   CCM_STAR.set_key(u.strobe.acknowledgement_key);
+  // printf("nonce: %d\n", nonce[11]);
   ccm_star_packetbuf_to_acknowledgement_nonce(nonce);
+  // printf("nonce (after): %d\n", nonce[11]);
   CCM_STAR.aead(nonce,
       NULL, 0,
       acknowledgement, EXPECTED_ACKNOWLEDGEMENT_LEN - ADAPTIVESEC_UNICAST_MIC_LEN,
       expected_mic, ADAPTIVESEC_UNICAST_MIC_LEN,
       1);
   AES_128_RELEASE_LOCK();
+  // printf("mic: %02x%02x\n", expected_mic[0], expected_mic[1]);
+  // uint8_t i;
+  // printf("key: ");
+  // for(i = 0; i < 4; ++i) {
+  //   printf("%d", u.strobe.acknowledgement_key[i]);
+  // }
+  // printf("\n");
+  // return 1;
   if(memcmp(expected_mic, acknowledgement + EXPECTED_ACKNOWLEDGEMENT_LEN - ADAPTIVESEC_UNICAST_MIC_LEN, ADAPTIVESEC_UNICAST_MIC_LEN)) {
     PRINTF("secrdc: inauthentic acknowledgement frame\n");
     return 0;

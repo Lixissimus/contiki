@@ -39,6 +39,8 @@
 
 #include "contiki.h"
 
+#include "dev/leds.h"
+
 #include "net/ip/simple-udp.h"
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-anycast.h"
@@ -47,11 +49,17 @@
 
 #define UDP_PORT 1234
 
-
+static struct ctimer off_timer;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(anycast_rec_process, "Anycast receiver process");
 AUTOSTART_PROCESSES(&anycast_rec_process);
+
+static void
+leds_turn_off(void *d)
+{
+  leds_off(LEDS_ALL);
+}
 
 static void
 receiver(struct simple_udp_connection *c,
@@ -62,8 +70,14 @@ receiver(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  printf("Data received on port %d from port %d with length %d\n",
-         receiver_port, sender_port, datalen);
+  printf("Data received on port %d from port %d with length %d: %s\n",
+         receiver_port, sender_port, datalen, data);
+  leds_on(LEDS_ALL);
+  if(!ctimer_expired(&off_timer)) {
+    ctimer_restart(&off_timer);
+  } else {
+    ctimer_set(&off_timer, CLOCK_SECOND / 2, leds_turn_off, NULL);
+  }
 }
 
 

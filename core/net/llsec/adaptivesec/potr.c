@@ -80,7 +80,7 @@
 #define HELLO_LEN CONTIKIMAC_FRAMER_SHORTEST_PACKET_SIZE
 #endif /* WITH_CONTIKIMAC_FRAMER && (HELLO_LEN < CONTIKIMAC_FRAMER_SHORTEST_PACKET_SIZE) */
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG && MAIN_DEBUG_CONF
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -245,6 +245,28 @@ potr_is_ack(void)
   return adaptivesec_get_cmd_id() == POTR_FRAME_TYPE_ACK;
 }
 /*---------------------------------------------------------------------------*/
+#if POTR_CONF_WITH_ANYCAST
+int
+potr_is_anycast(void)
+{
+  if(packetbuf_attr(PACKETBUF_ATTR_FRAME_TYPE) != FRAME802154_DATAFRAME) {
+    return 0;
+  }
+
+  switch(adaptivesec_get_cmd_id()) {
+  case POTR_FRAME_TYPE_ANYCAST:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_1:
+    return 1;
+  default:
+    return 0;
+  }
+}
+#endif /* POTR_CONF_WITH_ANYCAST */
+/*---------------------------------------------------------------------------*/
+
 int
 potr_length_of(enum potr_frame_type type)
 {
@@ -406,7 +428,7 @@ create(void)
       type = POTR_FRAME_TYPE_BROADCAST_DATA;
     } else if(packetbuf_holds_anycast()) {
       type = POTR_FRAME_TYPE_ANYCAST;
-      printf("potr frame type anycast!!!\n");
+      // printf("potr frame type anycast!!!\n");
     } else {
       type = POTR_FRAME_TYPE_UNICAST_DATA;
     }
