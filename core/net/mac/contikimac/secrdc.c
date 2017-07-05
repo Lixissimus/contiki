@@ -60,6 +60,8 @@
 #include "lib/random.h"
 #include "lib/csprng.h"
 
+#include <stdio.h>
+
 #ifdef SECRDC_CONF_WITH_DOZING
 #define WITH_DOZING SECRDC_CONF_WITH_DOZING
 #else /* SECRDC_CONF_WITH_DOZING */
@@ -994,9 +996,6 @@ PROCESS_THREAD(post_processing, ev, data)
       } else {
         NETSTACK_RADIO_ASYNC.read_footer();
         just_received_broadcast = packetbuf_holds_broadcast();
-        // if(packetbuf_holds_anycast()) {
-        //   packetbuf_print();
-        // }
         NETSTACK_MAC.input();
       }
       disable_local_packetbuf();
@@ -1029,9 +1028,10 @@ PROCESS_THREAD(post_processing, ev, data)
             u.strobe.strobe_start += 2 * WAKEUP_INTERVAL;
           }
         } else if(u.strobe.is_anycast) {
-          u.strobe.strobe_start = RTIMER_NOW() + 30*ILOCS_MIN_TIME_TO_STROBE;
+          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
+          printf("start: %lu/%d\n", u.strobe.strobe_start % WAKEUP_INTERVAL, WAKEUP_INTERVAL);
           // specialize_anycast_frame_type(packetbuf_hdrptr(), u.strobe.strobe_start);
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));

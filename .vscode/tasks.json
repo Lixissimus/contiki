@@ -46,7 +46,7 @@
             "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
             "isShellCommand": true,
             "args": [
-                "-e", 
+                "-e",
                 "--bootloader-invert-lines",
                 "-w",
                 "-v",
@@ -68,6 +68,38 @@
                 "-v",
                 "-b", "450000",
                 "-p", "/dev/ttyUSB2",
+                "-a", "0x00202000",
+                "${fileDirname}/${fileBasenameNoExtension}.bin"
+            ],
+            "showOutput": "always"
+        },
+        {
+            "taskName": "upload-3",
+            "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
+            "isShellCommand": true,
+            "args": [
+                "-e", 
+                "--bootloader-invert-lines",
+                "-w",
+                "-v",
+                "-b", "450000",
+                "-p", "/dev/ttyUSB3",
+                "-a", "0x00202000",
+                "${fileDirname}/${fileBasenameNoExtension}.bin"
+            ],
+            "showOutput": "always"
+        },
+        {
+            "taskName": "upload-4",
+            "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
+            "isShellCommand": true,
+            "args": [
+                "-e", 
+                "--bootloader-invert-lines",
+                "-w",
+                "-v",
+                "-b", "450000",
+                "-p", "/dev/ttyUSB4",
                 "-a", "0x00202000",
                 "${fileDirname}/${fileBasenameNoExtension}.bin"
             ],

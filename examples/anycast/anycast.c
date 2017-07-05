@@ -77,7 +77,7 @@ PROCESS_THREAD(anycast_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
   static uip_ipaddr_t anycast_addr;
-  static struct etimer wait_timer;
+  // static struct etimer wait_timer;
 
   PROCESS_BEGIN();
 
@@ -94,7 +94,7 @@ PROCESS_THREAD(anycast_process, ev, data)
   
   while(1)
   {
-    etimer_set(&wait_timer, 10*CLOCK_SECOND + 223);
+    // etimer_set(&wait_timer, 10*CLOCK_SECOND);
 
     // PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
     PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
