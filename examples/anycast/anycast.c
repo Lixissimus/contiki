@@ -39,6 +39,8 @@
 
 #include "contiki.h"
 
+#include "dev/button-sensor.h"
+
 #include "net/ip/simple-udp.h"
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-anycast.h"
@@ -68,16 +70,18 @@ receiver(struct simple_udp_connection *c,
 }
 
 
+
+
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(anycast_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
   static uip_ipaddr_t anycast_addr;
   static struct etimer wait_timer;
-  static const char *anycast_data = "anycast foo";
 
   PROCESS_BEGIN();
 
+  SENSORS_ACTIVATE(button_sensor);
   /* init the anycast module */
   init_uip_anycast();
   create_anycast_addr(&anycast_addr);
@@ -90,14 +94,19 @@ PROCESS_THREAD(anycast_process, ev, data)
   
   while(1)
   {
-    etimer_set(&wait_timer, 10*CLOCK_SECOND);
+    etimer_set(&wait_timer, 10*CLOCK_SECOND + 223);
 
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
-    printf("Sending anycast!\n");
-    print_addr(&anycast_addr);
-    simple_udp_sendto(&anycast_connection, anycast_data,
-                      strlen(anycast_data), &anycast_addr);
-    printf("\n");
+    // PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
+    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
+    if(button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL) {
+      static uint8_t msg_idx;
+      char buf[20];
+      printf("Sending anycast %d\n", msg_idx);
+      sprintf(buf, "Message %d", msg_idx);
+      simple_udp_sendto(&anycast_connection, buf,
+                        strlen(buf) + 1, &anycast_addr);
+      msg_idx += 1;
+    }
   }
   
   PROCESS_END();

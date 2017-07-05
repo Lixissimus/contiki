@@ -56,6 +56,22 @@
                 "${fileDirname}/${fileBasenameNoExtension}.bin"
             ],
             "showOutput": "always"
+        },
+        {
+            "taskName": "upload-2",
+            "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
+            "isShellCommand": true,
+            "args": [
+                "-e", 
+                "--bootloader-invert-lines",
+                "-w",
+                "-v",
+                "-b", "450000",
+                "-p", "/dev/ttyUSB2",
+                "-a", "0x00202000",
+                "${fileDirname}/${fileBasenameNoExtension}.bin"
+            ],
+            "showOutput": "always"
         }
     ]    
 }

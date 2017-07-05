@@ -72,7 +72,7 @@
 
 #include <stdio.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #include "net/ip/uip-debug.h"
 #if DEBUG && MAIN_DEBUG_CONF
 /* PRINTFI and PRINTFO are defined for input and output to debug one without changing the timing of the other */

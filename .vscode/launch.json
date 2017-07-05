@@ -30,6 +30,17 @@
             "externalConsole": true
         },
         {
+            "name": "Login-2",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/tools/sky/serialdump-linux",
+            "args":["-b115200", "/dev/ttyUSB2"],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            // "preLaunchTask": "upload-2",
+            "externalConsole": true
+        },
+        {
             "name": "Debug gdb",
             "type": "gdb",
             "request": "attach",

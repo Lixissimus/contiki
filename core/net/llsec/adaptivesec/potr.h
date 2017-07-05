@@ -114,6 +114,9 @@ void potr_init(void);
 int potr_parse_and_validate(void);
 int potr_is_helloack(void);
 int potr_is_ack(void);
+#if POTR_CONF_WITH_ANYCAST
+int potr_is_anycast(void);
+#endif /* POTR_CONF_WITH_ANYCAST */
 int potr_length_of(enum potr_frame_type type);
 
 #endif /* POTR_H_ */
