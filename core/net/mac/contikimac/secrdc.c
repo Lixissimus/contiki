@@ -777,9 +777,7 @@ create_acknowledgement_mic(void)
       , NULL
 #endif /* ILOCS_ENABLED */
   );
-  // printf("nonce: %d\n", nonce[11]);
   ccm_star_packetbuf_to_acknowledgement_nonce(nonce);
-  // printf("nonce (after): %d\n", nonce[11]);
   CCM_STAR.aead(nonce,
       NULL, 0,
       u.duty_cycle.acknowledgement,
@@ -788,14 +786,6 @@ create_acknowledgement_mic(void)
       ADAPTIVESEC_UNICAST_MIC_LEN,
       1);
   AES_128_RELEASE_LOCK();
-  // uint8_t i;
-  // printf("key: ");
-  // for(i = 0; i < 4; ++i) {
-  //   printf("%d", akes_nbr_get_sender_entry()->permanent->group_key[i]);
-  // }
-  // printf("\n");
-  /*printf("mic: %02x%02x\n", *(u.duty_cycle.acknowledgement + u.duty_cycle.acknowledgement_len - ADAPTIVESEC_UNICAST_MIC_LEN),
-    *(u.duty_cycle.acknowledgement + u.duty_cycle.acknowledgement_len - ADAPTIVESEC_UNICAST_MIC_LEN + 1));*/
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -942,24 +932,31 @@ secrdc_get_wake_up_counter(rtimer_clock_t t)
 }
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
-void
-specialize_anycast_frame_type(uint8_t *p, rtimer_clock_t t)
+uint8_t
+secrdc_specialize_anycast_frame_type()
 {
+  rtimer_clock_t t = rtimer_delta(my_wake_up_counter_last_increment, u.strobe.strobe_start);
+  /* if we will wake up again before strobing, 
+   * we will have to add 1 to the counter here already.
+   */
+  uint32_t wake_up_ctr = secrdc_get_wake_up_counter(u.strobe.strobe_start).u32 + (t / WAKEUP_INTERVAL);
   uint8_t type;
-  if (secrdc_get_wake_up_counter(t).u32 & 1) {
-    if ((rtimer_delta(my_wake_up_counter_last_increment, t) % WAKEUP_INTERVAL) < (WAKEUP_INTERVAL / 2)) {
+  rtimer_clock_t rel_time = t % WAKEUP_INTERVAL;
+  if (wake_up_ctr & 1) {
+    if (rel_time < (WAKEUP_INTERVAL / 2)) {
       type = POTR_FRAME_TYPE_ANYCAST_ODD_0;
     } else {
       type = POTR_FRAME_TYPE_ANYCAST_ODD_1;
     }
   } else {
-    if ((rtimer_delta(my_wake_up_counter_last_increment, t) % WAKEUP_INTERVAL) < (WAKEUP_INTERVAL / 2)) {
+    if (rel_time < (WAKEUP_INTERVAL / 2)) {
       type = POTR_FRAME_TYPE_ANYCAST_EVEN_0;
     } else {
       type = POTR_FRAME_TYPE_ANYCAST_EVEN_1;
     }
   }
-  p[0] = type;
+
+  return type;
 }
 #endif /* POTR_CONF_WITH_ANYCAST */
 #endif /* ILOCS_ENABLED */
@@ -1031,8 +1028,6 @@ PROCESS_THREAD(post_processing, ev, data)
           u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
-          printf("start: %lu/%d\n", u.strobe.strobe_start % WAKEUP_INTERVAL, WAKEUP_INTERVAL);
-          // specialize_anycast_frame_type(packetbuf_hdrptr(), u.strobe.strobe_start);
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
           u.strobe.is_helloack = 1;
@@ -1376,9 +1371,6 @@ strobe(void)
       /* wait for acknowledgement */
       schedule_strobe(RTIMER_NOW() + ACKNOWLEDGEMENT_WINDOW_MAX);
       PT_YIELD(&pt);
-      // if (u.strobe.is_anycast) {
-        // printf("waiting for ack...\n");
-      // }
       if(NETSTACK_RADIO_ASYNC.receiving_packet() || NETSTACK_RADIO_ASYNC.pending_packet()) {
         if(NETSTACK_RADIO_ASYNC.read_phy_header() != EXPECTED_ACKNOWLEDGEMENT_LEN) {
           PRINTF("secrdc: unexpected frame\n");
@@ -1533,23 +1525,13 @@ is_valid(uint8_t *acknowledgement)
   memcpy(nonce, u.strobe.nonce, CCM_STAR_NONCE_LENGTH);
   AES_128_GET_LOCK();
   CCM_STAR.set_key(u.strobe.acknowledgement_key);
-  // printf("nonce: %d\n", nonce[11]);
   ccm_star_packetbuf_to_acknowledgement_nonce(nonce);
-  // printf("nonce (after): %d\n", nonce[11]);
   CCM_STAR.aead(nonce,
       NULL, 0,
       acknowledgement, EXPECTED_ACKNOWLEDGEMENT_LEN - ADAPTIVESEC_UNICAST_MIC_LEN,
       expected_mic, ADAPTIVESEC_UNICAST_MIC_LEN,
       1);
   AES_128_RELEASE_LOCK();
-  // printf("mic: %02x%02x\n", expected_mic[0], expected_mic[1]);
-  // uint8_t i;
-  // printf("key: ");
-  // for(i = 0; i < 4; ++i) {
-  //   printf("%d", u.strobe.acknowledgement_key[i]);
-  // }
-  // printf("\n");
-  // return 1;
   if(memcmp(expected_mic, acknowledgement + EXPECTED_ACKNOWLEDGEMENT_LEN - ADAPTIVESEC_UNICAST_MIC_LEN, ADAPTIVESEC_UNICAST_MIC_LEN)) {
     PRINTF("secrdc: inauthentic acknowledgement frame\n");
     return 0;

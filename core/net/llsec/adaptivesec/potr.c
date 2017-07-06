@@ -51,6 +51,8 @@
 #include "net/mac/contikimac/secrdc.h"
 #include <string.h>
 
+#include <stdio.h>
+
 #ifdef POTR_CONF_KEY
 #define POTR_KEY POTR_CONF_KEY
 #else /* POTR_CONF_KEY */
@@ -411,8 +413,7 @@ create(void)
     if(packetbuf_holds_broadcast()) {
       type = POTR_FRAME_TYPE_BROADCAST_DATA;
     } else if(packetbuf_holds_anycast()) {
-      type = POTR_FRAME_TYPE_ANYCAST;
-      // printf("potr frame type anycast!!!\n");
+      type = secrdc_specialize_anycast_frame_type();
     } else {
       type = POTR_FRAME_TYPE_UNICAST_DATA;
     }
@@ -440,7 +441,8 @@ create(void)
   }
   p = packetbuf_hdrptr();
   /* there is no neighbor for anycasts */
-  if (type != POTR_FRAME_TYPE_ANYCAST) {
+  /* Todo: write Macro to test for all anycast types */
+  if (type < POTR_FRAME_TYPE_ANYCAST) {
     entry = akes_nbr_get_receiver_entry();
   }
   p[0] = type;
@@ -484,9 +486,11 @@ create(void)
     break;
 #if POTR_CONF_WITH_ANYCAST
   case POTR_FRAME_TYPE_ANYCAST:
-    PRINTF("about to create anycast otp... ");
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+  case POTR_FRAME_TYPE_ANYCAST_ODD_1:
     create_anycast_otp(p, 1, NULL, NULL);
-    PRINTF("done!\n");
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
   default:
@@ -562,7 +566,6 @@ potr_parse_and_validate(void)
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
   case POTR_FRAME_TYPE_ANYCAST_ODD_1:
-    PRINTF("potr: anycast frame type\n");
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_anycast);
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
@@ -685,9 +688,8 @@ potr_parse_and_validate(void)
     if(memcmp(otp.u8, p, POTR_OTP_LEN)) {
       PRINTF("potr: Invalid anycast OTP\n");
       return FRAMER_FAILED;
-    } else {
-      PRINTF("potr: Valid anycast OTP\n");
     }
+    
     /* Todo: check nonce for replay protection */
 
     break;
