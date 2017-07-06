@@ -98,6 +98,9 @@ int potr_has_strobe_index(enum potr_frame_type type);
 rtimer_clock_t secrdc_get_last_wake_up_time(void);
 rtimer_clock_t secrdc_get_next_strobe_start(void);
 ilocs_wake_up_counter_t secrdc_get_wake_up_counter(rtimer_clock_t t);
+#if POTR_CONF_WITH_ANYCAST
+uint8_t secrdc_specialize_anycast_frame_type();
+#endif /* POTR_CONF_WITH_ANYCAST */
 #endif /* ILOCS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
