@@ -924,8 +924,20 @@ secrdc_get_wake_up_counter(rtimer_clock_t t)
 }
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
+rtimer_clock_t
+secrdc_get_strobe_start_time(void)
+{
+  return sfd_timestamp;
+}
+/*---------------------------------------------------------------------------*/
+rtimer_clock_t
+secrdc_get_wakeup_interval(void)
+{
+  return WAKEUP_INTERVAL;
+}
+/*---------------------------------------------------------------------------*/
 uint8_t
-secrdc_specialize_anycast_frame_type()
+secrdc_specialize_anycast_frame_type(void)
 {
   rtimer_clock_t t = rtimer_delta(my_wake_up_counter_last_increment, u.strobe.strobe_start);
   /* if we will wake up again before strobing, 
