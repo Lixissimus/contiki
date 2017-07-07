@@ -51,8 +51,6 @@
 #include "net/mac/contikimac/secrdc.h"
 #include <string.h>
 
-#include <stdio.h>
-
 #ifdef POTR_CONF_KEY
 #define POTR_KEY POTR_CONF_KEY
 #else /* POTR_CONF_KEY */
@@ -81,7 +79,7 @@
 #define HELLO_LEN CONTIKIMAC_FRAMER_SHORTEST_PACKET_SIZE
 #endif /* WITH_CONTIKIMAC_FRAMER && (HELLO_LEN < CONTIKIMAC_FRAMER_SHORTEST_PACKET_SIZE) */
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG && MAIN_DEBUG_CONF
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -105,6 +103,10 @@ static uint8_t cached_otps_index;
 static linkaddr_t sender_of_last_accepted_broadcast;
 static ilocs_wake_up_counter_t wake_up_counter_at_last_accepted_broadcast;
 #endif /* ILOCS_ENABLED */
+#if POTR_CONF_WITH_ANYCAST
+static uint8_t last_anycast_type;
+static uint8_t strobe_index_received;
+#endif /* POTR_CONF_WITH_ANYCAST */
 
 /*---------------------------------------------------------------------------*/
 void
@@ -118,6 +120,27 @@ void
 potr_set_anycast_seqno(void)
 {
   packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, ++potr_my_anycast_seqno);
+}
+/*---------------------------------------------------------------------------*/
+uint8_t
+potr_get_last_anycast_type(void)
+{
+  return last_anycast_type;
+}
+/*---------------------------------------------------------------------------*/
+uint8_t
+potr_get_strobe_index_received(void)
+{
+  return strobe_index_received;
+}
+/*---------------------------------------------------------------------------*/
+rtimer_clock_t
+potr_calculate_strobe_time(void)
+{
+  /* data_len + shr_len + framelen_len (in bits) / 250kb/s 
+   * converted to micro seconds, converted to rtimer ticks
+   */
+  return US_TO_RTIMERTICKS((packetbuf_datalen() + 5 + 1) * 8 * 100 / 250);
 }
 #endif /* POTR_CONF_WITH_ANYCAST */
 /*---------------------------------------------------------------------------*/
@@ -374,7 +397,13 @@ create_anycast_otp(uint8_t *p, int forward, void *entry, uint8_t *nonce)
   uint8_t *group_key;
 
   memset(block, 0, AES_128_BLOCK_SIZE);
-  ccm_star_packetbuf_set_nonce(block, forward, NULL);
+  ccm_star_packetbuf_set_nonce(
+      block,
+      forward,
+      (entry && ((struct akes_nbr_entry *)entry)->permanent) ?
+          &((struct akes_nbr_entry *)entry)->permanent->phase :
+          NULL);
+
   if(nonce) {
     memcpy(nonce, block, CCM_STAR_NONCE_LENGTH);
   }
@@ -382,15 +411,9 @@ create_anycast_otp(uint8_t *p, int forward, void *entry, uint8_t *nonce)
   block[8] = 0x00;
 
   if (forward) {
-
     /* for sending anycast, we use our own group key */
     group_key = adaptivesec_group_key;
   } else {
-    /* 
-     * Todo: create otp with respect to specific type.
-     * Maybe separate function restore_anycast_otp?
-     */
-
     /* when receiving anycast, we use the senders group key */
     group_key = ((struct akes_nbr_entry *)entry)->permanent->group_key;
   }
@@ -414,6 +437,7 @@ create(void)
       type = POTR_FRAME_TYPE_BROADCAST_DATA;
     } else if(packetbuf_holds_anycast()) {
       type = secrdc_specialize_anycast_frame_type();
+      last_anycast_type = type;
     } else {
       type = POTR_FRAME_TYPE_UNICAST_DATA;
     }
@@ -567,6 +591,7 @@ potr_parse_and_validate(void)
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
   case POTR_FRAME_TYPE_ANYCAST_ODD_1:
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_anycast);
+    last_anycast_type = type;
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
   default:
@@ -682,14 +707,17 @@ potr_parse_and_validate(void)
       PRINTF("potr: Anycast sender is not permanent\n");
       return FRAMER_FAILED;
     }
-    create_anycast_otp(otp.u8, 0, entry, nonce);
+    
     read_otp();
-
+    /* read strobe index */
+    NETSTACK_RADIO_ASYNC.read_payload(1);
+    strobe_index_received = *(p + POTR_OTP_LEN);
+    create_anycast_otp(otp.u8, 0, entry, nonce);
     if(memcmp(otp.u8, p, POTR_OTP_LEN)) {
       PRINTF("potr: Invalid anycast OTP\n");
       return FRAMER_FAILED;
     }
-    
+
     /* Todo: check nonce for replay protection */
 
     break;

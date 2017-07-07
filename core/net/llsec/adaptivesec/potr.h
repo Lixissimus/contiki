@@ -116,6 +116,9 @@ int potr_is_helloack(void);
 int potr_is_ack(void);
 #if POTR_CONF_WITH_ANYCAST
 int potr_is_anycast(void);
+uint8_t potr_get_last_anycast_type(void);
+uint8_t potr_get_strobe_index_received(void);
+rtimer_clock_t potr_calculate_strobe_time(void);
 #endif /* POTR_CONF_WITH_ANYCAST */
 int potr_length_of(enum potr_frame_type type);
 

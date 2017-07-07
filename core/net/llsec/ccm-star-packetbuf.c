@@ -119,8 +119,38 @@ restore_wake_up_counter(struct secrdc_phase *phase)
 static ilocs_wake_up_counter_t
 restore_anycast_wakeup_counter(struct secrdc_phase *phase)
 {
-  ilocs_wake_up_counter_t count;
-  
+  static ilocs_wake_up_counter_t count;
+  /* no phase is passed, this is because we are creating an ACK */
+  if(!phase) {
+    return count;
+  }
+
+  const rtimer_clock_t t_rec = secrdc_get_strobe_start_time();
+  const rtimer_clock_t t_strobe = potr_calculate_strobe_time();
+  /* time when he started first strobe (strobe_idx starts at 0, therefore +1) */
+  /* Todo: check if strobe index really starts at 0 */
+  const uint32_t t_start = t_rec - t_strobe * (potr_get_strobe_index_received() + 1);
+  count.u32 = phase->his_wake_up_counter_at_t.u32 + (t_start - phase->t) / secrdc_get_wakeup_interval();
+
+  switch(potr_get_last_anycast_type()) {
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
+    /* round up to even */
+    count.u32 += count.u32 & 1 ? 1 : 0;
+    break;
+  case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
+    /* round down to even */
+    count.u32 -= count.u32 & 1 ? 1 : 0;
+    break;
+  case POTR_FRAME_TYPE_ANYCAST_ODD_0:
+    /* round up to odd */
+    count.u32 += count.u32 & 1 ? 0 : 1;
+    break;
+  case POTR_FRAME_TYPE_ANYCAST_ODD_1:
+    /* round down to odd */
+    count.u32 -= count.u32 & 1 ? 0 : 1;
+    break;
+
+  }
   return count;
 }
 #endif /* POTR_CONF_WITH_ANYCAST */
@@ -163,11 +193,8 @@ ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
       count = secrdc_get_wake_up_counter(secrdc_get_next_strobe_start());
     } else {
       /* we are receiving */
-      /* Todo: actually implement this! */
       count = restore_anycast_wakeup_counter(phase);
     }
-    /* for testing purpose */
-    count.u32 = 123;
     
     /* store alpha = 4 together with wake-up counter */
     count.u32 += 0xE0000000;
