@@ -92,9 +92,6 @@ static void read_otp(void);
 
 #if ILOCS_ENABLED
 uint8_t potr_my_broadcast_seqno;
-#if POTR_CONF_WITH_ANYCAST
-uint8_t potr_my_anycast_seqno;
-#endif /* POTR_CONF_WITH_ANYCAST */
 #endif /* ILOCS_ENABLED */
 static uint8_t potr_key[16] = POTR_KEY;
 static potr_otp_t cached_otps[MAX_CACHED_OTPS];
@@ -116,12 +113,6 @@ potr_set_seqno(struct akes_nbr *receiver)
 }
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
-void
-potr_set_anycast_seqno(void)
-{
-  packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, ++potr_my_anycast_seqno);
-}
-/*---------------------------------------------------------------------------*/
 uint8_t
 potr_get_last_anycast_type(void)
 {
@@ -213,12 +204,12 @@ has_seqno(enum potr_frame_type type)
   switch(type) {
   case POTR_FRAME_TYPE_UNICAST_DATA:
   case POTR_FRAME_TYPE_UNICAST_COMMAND:
+    return 1;
   case POTR_FRAME_TYPE_ANYCAST:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
   case POTR_FRAME_TYPE_ANYCAST_ODD_1:
-    return 1;
   case POTR_FRAME_TYPE_HELLOACK:
   case POTR_FRAME_TYPE_HELLOACK_P:
   case POTR_FRAME_TYPE_ACK:

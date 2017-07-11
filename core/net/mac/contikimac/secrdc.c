@@ -948,7 +948,7 @@ secrdc_get_wakeup_interval(void)
 }
 /*---------------------------------------------------------------------------*/
 rtimer_clock_t
-secrdc_get_ack_window_length(void)
+secrdc_get_inter_frame_length(void)
 {
   return INTER_FRAME_PERIOD;
 }
