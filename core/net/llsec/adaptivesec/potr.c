@@ -186,7 +186,6 @@ potr_has_strobe_index(enum potr_frame_type type)
     case POTR_FRAME_TYPE_HELLOACK:
     case POTR_FRAME_TYPE_HELLOACK_P:
     case POTR_FRAME_TYPE_ACK:
-    case POTR_FRAME_TYPE_ANYCAST:
     case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
     case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
     case POTR_FRAME_TYPE_ANYCAST_ODD_0:
@@ -205,7 +204,6 @@ has_seqno(enum potr_frame_type type)
   case POTR_FRAME_TYPE_UNICAST_DATA:
   case POTR_FRAME_TYPE_UNICAST_COMMAND:
     return 1;
-  case POTR_FRAME_TYPE_ANYCAST:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
@@ -255,7 +253,6 @@ potr_is_anycast(void)
   }
 
   switch(adaptivesec_get_cmd_id()) {
-  case POTR_FRAME_TYPE_ANYCAST:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
@@ -286,7 +283,7 @@ length(void)
   }
   
   if(packetbuf_holds_anycast()) {
-    return potr_length_of(POTR_FRAME_TYPE_ANYCAST);
+    return potr_length_of(POTR_FRAME_TYPE_ANYCAST_EVEN_0);
   }
   
   return potr_length_of(POTR_FRAME_TYPE_UNICAST_DATA);
@@ -451,7 +448,7 @@ create(void)
   p = packetbuf_hdrptr();
   /* there is no neighbor for anycasts */
   /* Todo: write Macro to test for all anycast types */
-  if (type < POTR_FRAME_TYPE_ANYCAST) {
+  if (type < POTR_FRAME_TYPE_ANYCAST_EVEN_0) {
     entry = akes_nbr_get_receiver_entry();
   }
   p[0] = type;
@@ -494,7 +491,6 @@ create(void)
     memcpy(p, entry->tentative->meta->otp.u8, POTR_OTP_LEN);
     break;
 #if POTR_CONF_WITH_ANYCAST
-  case POTR_FRAME_TYPE_ANYCAST:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
@@ -572,7 +568,6 @@ potr_parse_and_validate(void)
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
     break;
 #if POTR_CONF_WITH_ANYCAST
-  case POTR_FRAME_TYPE_ANYCAST:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
@@ -589,7 +584,6 @@ potr_parse_and_validate(void)
   switch(type) {
   case POTR_FRAME_TYPE_BROADCAST_DATA:
   case POTR_FRAME_TYPE_UNICAST_DATA:
-  case POTR_FRAME_TYPE_ANYCAST:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
@@ -685,7 +679,6 @@ potr_parse_and_validate(void)
     }
     break;
 #if POTR_CONF_WITH_ANYCAST
-  case POTR_FRAME_TYPE_ANYCAST:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
