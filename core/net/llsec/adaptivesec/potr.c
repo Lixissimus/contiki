@@ -782,7 +782,6 @@ parse(void)
     packetbuf_set_attr(PACKETBUF_ATTR_MAC_SEQNO, hdrptr[len - 1]);
   }
 
-  // Todo: PRINTF("...", packetbuf_dataptr())
   if(!packetbuf_hdrreduce(len)) {
     PRINTF("potr: packetbuf_hdrreduce failed\n");
     return FRAMER_FAILED;
