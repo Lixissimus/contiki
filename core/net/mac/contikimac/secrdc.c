@@ -351,6 +351,9 @@ static rtimer_clock_t my_wake_up_counter_last_increment;
 #endif /* ILOCS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
+static rtimer_clock_t real_strobe_time;
+static rtimer_clock_t last_strobe_time;
+
 /*---------------------------------------------------------------------------*/
 #if WITH_AUTO_CCA
 static void
@@ -944,6 +947,12 @@ secrdc_get_wakeup_interval(void)
   return WAKEUP_INTERVAL;
 }
 /*---------------------------------------------------------------------------*/
+rtimer_clock_t
+secrdc_get_ack_window_length(void)
+{
+  return INTER_FRAME_PERIOD;
+}
+/*---------------------------------------------------------------------------*/
 uint8_t
 secrdc_specialize_anycast_frame_type(void)
 {
@@ -951,7 +960,7 @@ secrdc_specialize_anycast_frame_type(void)
   /* if we will wake up again before strobing, 
    * we will have to add 1 to the counter here already.
    */
-  uint32_t wake_up_ctr = secrdc_get_wake_up_counter(u.strobe.strobe_start).u32 + (t / WAKEUP_INTERVAL);
+  uint32_t wake_up_ctr = secrdc_get_wake_up_counter(u.strobe.strobe_start).u32;
   uint8_t type;
   rtimer_clock_t rel_time = t % WAKEUP_INTERVAL;
   if (wake_up_ctr & 1) {
@@ -967,6 +976,7 @@ secrdc_specialize_anycast_frame_type(void)
       type = POTR_FRAME_TYPE_ANYCAST_EVEN_1;
     }
   }
+  printf("rel time sender: %d\n", rel_time);
 
   return type;
 }
@@ -1351,6 +1361,13 @@ strobe(void)
     /* busy waiting for better timing */
     while(!rtimer_has_timed_out(u.strobe.next_transmission));
 
+    if(u.strobe.is_anycast && u.strobe.strobes && !real_strobe_time) {
+      if(!last_strobe_time) {
+        last_strobe_time = RTIMER_NOW();
+      } else {
+        real_strobe_time = RTIMER_NOW() - last_strobe_time;
+      }
+    }
     if(transmit() != RADIO_TX_OK) {
       PRINTF("secrdc: NETSTACK_RADIO_ASYNC.transmit failed\n");
       u.strobe.result = MAC_TX_ERR;
@@ -1408,6 +1425,11 @@ strobe(void)
             u.strobe.phase->his_wake_up_counter_at_t = ilocs_parse_wake_up_counter(u.strobe.nonce + 9);
             u.strobe.phase->his_wake_up_counter_at_t.u32 -= 0x40000000;
           }
+
+          printf("real_strobe_time: %d\n", real_strobe_time);
+          real_strobe_time = 0;
+          last_strobe_time = 0;
+
 #endif /* ILOCS_ENABLED */
           u.strobe.phase->t = u.strobe.t1[0] - acknowledgement[1];
 #else /* SECRDC_WITH_SECURE_PHASE_LOCK */

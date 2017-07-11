@@ -44,6 +44,9 @@
 #include "lib/ccm-star.h"
 #include "net/mac/contikimac/ilocs.h"
 
+#if POTR_CONF_WITH_ANYCAST
+ilocs_wake_up_counter_t restore_anycast_wakeup_counter(struct secrdc_phase *phase);
+#endif /* POTR_CONF_WITH_ANYCAST */
 void ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
 #if ILOCS_ENABLED
     , struct secrdc_phase *phase
