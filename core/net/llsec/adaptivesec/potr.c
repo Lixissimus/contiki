@@ -144,9 +144,10 @@ rtimer_clock_t
 potr_calculate_strobe_time(void)
 {
   /* data_len + shr_len + framelen_len (in bits) / 250kb/s 
-   * converted to micro seconds, converted to rtimer ticks
+   * converted to micro seconds, converted to rtimer ticks,
+   * 4 instead of 1000/250
    */
-  return US_TO_RTIMERTICKS((packetbuf_datalen() + 5 + 1) * 8 * 100 / 250);
+  return US_TO_RTIMERTICKS((packetbuf_datalen() + 5 + 1) * 8 * 4);
 }
 #endif /* POTR_CONF_WITH_ANYCAST */
 /*---------------------------------------------------------------------------*/
@@ -531,6 +532,8 @@ create(void)
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
   case POTR_FRAME_TYPE_ANYCAST_ODD_1:
     create_anycast_otp(p, 1, NULL, NULL);
+    rtimer_clock_t planned_start = secrdc_get_next_strobe_start();
+    PRINTF("wakeup counter at %u: %u (%u)\n", planned_start, secrdc_get_wake_up_counter(planned_start).u32, type);
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
   default:
@@ -717,7 +720,7 @@ potr_parse_and_validate(void)
     strobe_index_received = *(p + POTR_OTP_LEN);
     create_anycast_otp(otp.u8, 0, entry, nonce);
     if(memcmp(otp.u8, p, POTR_OTP_LEN)) {
-      PRINTF("potr: Invalid anycast OTP\n");
+      PRINTF("potr: Invalid anycast OTP %u (%u)\n", restore_anycast_wakeup_counter(NULL).u32, type);
       return FRAMER_FAILED;
     }
 

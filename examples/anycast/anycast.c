@@ -91,7 +91,6 @@ PROCESS_THREAD(anycast_process, ev, data)
                       NULL, UDP_PORT,
                       receiver);
 
-  
   while(1)
   {
     // etimer_set(&wait_timer, 10*CLOCK_SECOND);
@@ -100,7 +99,7 @@ PROCESS_THREAD(anycast_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
     if(button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL) {
       static uint8_t msg_idx;
-      char buf[20];
+      char buf[127];
       printf("Sending anycast %d\n", msg_idx);
       sprintf(buf, "Message %d", msg_idx);
       simple_udp_sendto(&anycast_connection, buf,

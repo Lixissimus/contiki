@@ -101,6 +101,7 @@ ilocs_wake_up_counter_t secrdc_get_wake_up_counter(rtimer_clock_t t);
 #if POTR_CONF_WITH_ANYCAST
 rtimer_clock_t secrdc_get_strobe_start_time(void);
 rtimer_clock_t secrdc_get_wakeup_interval(void);
+rtimer_clock_t secrdc_get_ack_window_length(void);
 uint8_t secrdc_specialize_anycast_frame_type(void);
 #endif /* POTR_CONF_WITH_ANYCAST */
 #endif /* ILOCS_ENABLED */

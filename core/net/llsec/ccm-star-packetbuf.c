@@ -47,6 +47,8 @@
 #include "net/llsec/adaptivesec/potr.h"
 #include <string.h>
 
+#include <stdio.h>
+
 /*---------------------------------------------------------------------------*/
 static const uint8_t *
 get_extended_address(const linkaddr_t *addr)
@@ -116,7 +118,7 @@ restore_wake_up_counter(struct secrdc_phase *phase)
 #endif /* ILOCS_ENABLED */
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
-static ilocs_wake_up_counter_t
+ilocs_wake_up_counter_t 
 restore_anycast_wakeup_counter(struct secrdc_phase *phase)
 {
   static ilocs_wake_up_counter_t count;
@@ -126,11 +128,12 @@ restore_anycast_wakeup_counter(struct secrdc_phase *phase)
   }
 
   const rtimer_clock_t t_rec = secrdc_get_strobe_start_time();
-  const rtimer_clock_t t_strobe = potr_calculate_strobe_time();
-  /* time when he started first strobe (strobe_idx starts at 0, therefore +1) */
-  /* Todo: check if strobe index really starts at 0 */
-  const uint32_t t_start = t_rec - t_strobe * (potr_get_strobe_index_received() + 1);
+  const rtimer_clock_t t_strobe = potr_calculate_strobe_time() + secrdc_get_ack_window_length();
+  /* time when he started first strobe */
+  const uint32_t t_start = t_rec - t_strobe * potr_get_strobe_index_received();
   count.u32 = phase->his_wake_up_counter_at_t.u32 + (t_start - phase->t) / secrdc_get_wakeup_interval();
+  // printf("his time: %d\n", rtimer_delta(t_start, phase->t) % secrdc_get_wakeup_interval());
+  printf("calc strobe time: %d\n", t_strobe);
 
   switch(potr_get_last_anycast_type()) {
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:
