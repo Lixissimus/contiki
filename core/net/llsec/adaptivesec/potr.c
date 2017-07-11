@@ -341,9 +341,6 @@ create_normal_otp(uint8_t *p, int forward, void *entry)
       (entry && ((struct akes_nbr_entry *)entry)->permanent)
           ? &((struct akes_nbr_entry *)entry)->permanent->phase
           : NULL);
-  if(nonce) {
-    memcpy(nonce, block, CCM_STAR_NONCE_LENGTH);
-  }
   /* because we dont use strobe index in OTP */
   block[8] = 0x00;
 
@@ -383,7 +380,7 @@ create_normal_otp(uint8_t *p, uint8_t *group_key)
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
 static void
-create_anycast_otp(uint8_t *p, int forward, void *entry, uint8_t *nonce)
+create_anycast_otp(uint8_t *p, int forward, void *entry)
 {
   uint8_t block[AES_128_BLOCK_SIZE];
   uint8_t *group_key;
@@ -395,10 +392,6 @@ create_anycast_otp(uint8_t *p, int forward, void *entry, uint8_t *nonce)
       (entry && ((struct akes_nbr_entry *)entry)->permanent) ?
           &((struct akes_nbr_entry *)entry)->permanent->phase :
           NULL);
-
-  if(nonce) {
-    memcpy(nonce, block, CCM_STAR_NONCE_LENGTH);
-  }
   /* because we dont use strobe index in OTP */
   block[8] = 0x00;
 
@@ -506,7 +499,7 @@ create(void)
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
   case POTR_FRAME_TYPE_ANYCAST_ODD_1:
-    create_anycast_otp(p, 1, NULL, NULL);
+    create_anycast_otp(p, 1, NULL);
     rtimer_clock_t planned_start = secrdc_get_next_strobe_start();
     PRINTF("wakeup counter at %u: %u (%u)\n", planned_start, secrdc_get_wake_up_counter(planned_start).u32, type);
     break;
@@ -706,7 +699,7 @@ potr_parse_and_validate(void)
     /* read strobe index */
     NETSTACK_RADIO_ASYNC.read_payload(1);
     strobe_index_received = *(p + POTR_OTP_LEN);
-    create_anycast_otp(otp.u8, 0, entry, nonce);
+    create_anycast_otp(otp.u8, 0, entry);
     if(memcmp(otp.u8, p, POTR_OTP_LEN)) {
       PRINTF("potr: Invalid anycast OTP %u (%u)\n", restore_anycast_wakeup_counter(NULL).u32, type);
       return FRAMER_FAILED;
@@ -771,31 +764,6 @@ potr_parse_and_validate(void)
     break;
   }
   p += POTR_OTP_LEN;
-
-#if ILOCS_ENABLED
-  switch(type) {
-  case POTR_FRAME_TYPE_HELLO:
-    if(invalid_hello_otp) {
-      break;
-    }
-  case POTR_FRAME_TYPE_BROADCAST_DATA:
-  case POTR_FRAME_TYPE_BROADCAST_COMMAND:
-    if(entry && entry->permanent) {
-      NETSTACK_RADIO_ASYNC.read_payload(1);
-      if(p[0] == entry->permanent->his_broadcast_seqno) {
-        PRINTF("potr: Duplicate\n");
-        return FRAMER_FAILED;
-      }
-    }
-    break;
-  default:
-    break;
-  }
-#endif /* ILOCS_ENABLED */
-
-  // if (packetbuf_holds_anycast()) {
-  //   packetbuf_print();
-  // }
 
   return potr_length_of(type);
 }
