@@ -159,8 +159,6 @@ send(mac_callback_t sent, void *ptr)
     }
     receiver = NULL;
   } else if(packetbuf_holds_anycast()) {
-    PRINTF("packetbuf holds anycast\n");
-    potr_set_anycast_seqno();
     ADAPTIVESEC_STRATEGY.send(sent, ptr);
     return;
   } else {

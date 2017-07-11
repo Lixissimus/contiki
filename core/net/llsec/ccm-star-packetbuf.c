@@ -128,7 +128,7 @@ restore_anycast_wakeup_counter(struct secrdc_phase *phase)
   }
 
   const rtimer_clock_t t_rec = secrdc_get_strobe_start_time();
-  const rtimer_clock_t t_strobe = potr_calculate_strobe_time() + secrdc_get_ack_window_length();
+  const rtimer_clock_t t_strobe = potr_calculate_strobe_time() + secrdc_get_inter_frame_length();
   /* time when he started first strobe */
   const uint32_t t_start = t_rec - t_strobe * potr_get_strobe_index_received();
   count.u32 = phase->his_wake_up_counter_at_t.u32 + (t_start - phase->t) / secrdc_get_wakeup_interval();
