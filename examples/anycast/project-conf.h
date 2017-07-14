@@ -108,8 +108,7 @@
 #undef UIP_CONF_TCP
 #define UIP_CONF_TCP 0
 
-/* enable anycast support */
-#undef POTR_CONF_WITH_ANYCAST
-#define POTR_CONF_WITH_ANYCAST 1
+/* configure routing */
+#include "net/orpl/orpl-autoconf.h"
 
 #endif /* PROJECT_ANYCAST_CONF_H_ */

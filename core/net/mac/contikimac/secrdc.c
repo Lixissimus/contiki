@@ -59,6 +59,7 @@
 #endif /* LPM_CONF_ENABLE */
 #include "lib/random.h"
 #include "lib/csprng.h"
+#include "net/orpl/orpl.h"
 
 #include <stdio.h>
 
@@ -660,13 +661,20 @@ on_fifop(void)
         PRINTF("secrdc: rejected frame of length %i\n", packetbuf_datalen());
         finish_duty_cycle();
       } else {
+#if POTR_CONF_WITH_ANYCAST
+        u.duty_cycle.is_anycast = potr_is_anycast();
+#if ORPL_ENABLED
+        if(u.duty_cycle.is_anycast && !(orpl_should_receive() == ORPL_ROUTE_KEEP)) {
+          disable_and_reset_radio();
+          // PRINTF("secrdc: routing decided to rejecte frame of length %i\n");
+          finish_duty_cycle();
+        } else {
+#endif /* ORPL_ENABLED */
+#endif /* POTR_CONF_WITH_ANYCAST */
         u.duty_cycle.shall_send_acknowledgement = !packetbuf_holds_broadcast();
 #if SECRDC_WITH_SECURE_PHASE_LOCK
         u.duty_cycle.is_helloack = potr_is_helloack();
         u.duty_cycle.is_ack = potr_is_ack();
-#if POTR_CONF_WITH_ANYCAST
-        u.duty_cycle.is_anycast = potr_is_anycast();
-#endif /* POTR_CONF_WITH_ANYCAST */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
         if(u.duty_cycle.shall_send_acknowledgement) {
@@ -675,6 +683,9 @@ on_fifop(void)
         NETSTACK_RADIO_ASYNC.set_object(RADIO_PARAM_FIFOP_CALLBACK,
             on_final_fifop,
             NETSTACK_RADIO_ASYNC.remaining_payload_bytes() + RADIO_ASYNC_CHECKSUM_LEN);
+#if POTR_CONF_WITH_ANYCAST && ORPL_ENABLED
+        }
+#endif /* POTR_CONF_WITH_ANYCAST && ORPL_ENABLED */
       }
       disable_local_packetbuf();
     }
@@ -976,7 +987,7 @@ secrdc_specialize_anycast_frame_type(void)
       type = POTR_FRAME_TYPE_ANYCAST_EVEN_1;
     }
   }
-  printf("rel time sender: %d\n", rel_time);
+  // printf("rel time sender: %d\n", rel_time);
 
   return type;
 }
@@ -1426,7 +1437,7 @@ strobe(void)
             u.strobe.phase->his_wake_up_counter_at_t.u32 -= 0x40000000;
           }
 
-          printf("real_strobe_time: %d\n", real_strobe_time);
+          // printf("real_strobe_time: %d\n", real_strobe_time);
           real_strobe_time = 0;
           last_strobe_time = 0;
 

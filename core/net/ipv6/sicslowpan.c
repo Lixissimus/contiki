@@ -1636,13 +1636,6 @@ input(void)
       /* unknown header */
       PRINTFI("sicslowpan input: unknown dispatch: %02x\n",
              PACKETBUF_HC1_PTR[PACKETBUF_HC1_DISPATCH]);
-      // uint8_t *ptr;
-      // ptr = packetbuf_dataptr();
-      // PRINTFI("sicslowpan input: unknown dispatch: %02x, %02x, %02x, %02x\n",
-      //        ptr[PACKETBUF_HC1_DISPATCH-4],
-      //        ptr[PACKETBUF_HC1_DISPATCH-2],
-      //        ptr[PACKETBUF_HC1_DISPATCH],
-      //        ptr[PACKETBUF_HC1_DISPATCH+2]);
       return;
   }
 

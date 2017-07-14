@@ -59,7 +59,7 @@
 
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG 1
 #include "net/ip/uip-debug.h"
 
 #if UIP_LOGGING
@@ -536,6 +536,9 @@ tcpip_ipv6_output(void)
 {
   uip_ds6_nbr_t *nbr = NULL;
   uip_ipaddr_t *nexthop = NULL;
+#if ORPL_ENABLED
+  uip_ipaddr_t anycast_ip_addr;
+#endif /* ORPL_ENABLED */
 
   if(uip_len == 0) {
     return;
@@ -562,18 +565,30 @@ tcpip_ipv6_output(void)
   }
 #endif /* UIP_CONF_IPV6_RPL */
 
-#if POTR_CONF_WITH_ANYCAST
-  if(uip_is_anycast_addr(&UIP_IP_BUF->destipaddr)) {
-    printf("tcpip_ipv6_output: Output Anycast\n");
-    
+#if ORPL_ENABLED
+  /* Todo: fix, deactivate on-link optimization for now */
+  if(uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr) && 0){
+    /* Direct neighbor, just use it as next hop */
+    PRINTF("tcpip: onlink routing\n");
+    nexthop = &UIP_IP_BUF->destipaddr;
+  } else if(uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
+    /* Multicast, no routing required */
+    PRINTF("tcpip: multicast routing\n");
+    tcpip_output(NULL);
+    uip_clear_buf();
+    return;
+  } else {
+    /* We do anycast routing */
+    PRINTF("tcpip: anycast routing\n");
     uip_lladdr_t anycast_ll_addr;
     uip_create_ll_anycast_addr(&anycast_ll_addr);
     tcpip_output(&anycast_ll_addr);
     uip_clear_buf();
-    return;
+    return;    
   }
-#endif /* POTR_CONF_WITH_ANYCAST */
-
+  /* Todo: refactor this! */
+  {
+#else
   if(!uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Next hop determination */
 
@@ -674,6 +689,8 @@ tcpip_ipv6_output(void)
       }
 #endif /* TCPIP_CONF_ANNOTATE_TRANSMISSIONS */
     }
+
+#endif /* ORPL_ENABLED */
 
     /* End of next hop determination */
 

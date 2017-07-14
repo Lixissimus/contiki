@@ -81,6 +81,7 @@
 #include "net/ipv6/multicast/uip-mcast6.h"
 
 #include "net/ipv6/uip-anycast.h"
+#include "net/orpl/orpl.h"
 
 #if UIP_CONF_IPV6_RPL
 #include "rpl/rpl.h"
@@ -92,6 +93,7 @@
 #endif /* UIP_ND6_SEND_NS */
 
 #include <string.h>
+#include <stdio.h>
 
 /*---------------------------------------------------------------------------*/
 /* For Debug, logging, statistics                                            */
@@ -1218,6 +1220,24 @@ uip_process(uint8_t flag)
   }
 #endif /* UIP_IPV6_MULTICAST */
 
+#if ORPL_ENABLED
+  switch(orpl_make_routing_decision(&UIP_IP_BUF->destipaddr)) {
+  case ORPL_ROUTE_KEEP:
+    /* This packet is for us, deliver up the stack */
+    goto process;
+  case ORPL_ROUTE_UP:
+    /* Not for us, continue routing */
+    /* Todo: reflect down the stack  */
+    printf("uip6: continue routing\n");
+    goto send;
+    break;
+  case ORPL_ROUTE_DOWN:
+  case ORPL_ROUTE_REJECT:
+    /* not handled yet */
+    break;
+  }
+#endif /* ORPL_ENABLED */
+
   /* TBD Some Parameter problem messages */
 
   if(!uip_ds6_is_my_addr(&UIP_IP_BUF->destipaddr) &&
@@ -1284,7 +1304,7 @@ uip_process(uint8_t flag)
   uip_ext_bitmap = 0;
 #endif /* UIP_CONF_ROUTER */
 
-#if UIP_IPV6_MULTICAST
+#if UIP_IPV6_MULTICAST || ORPL_ENABLED
   process:
 #endif
 

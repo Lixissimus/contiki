@@ -44,10 +44,15 @@
 #include "net/ip/simple-udp.h"
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-anycast.h"
+#include "net/ipv6/uip-ds6.h"
+#include "net/ip/uip-debug.h"
 
 #include <stdio.h>
 #include <string.h>
 
+#include "apps/servreg-hack/servreg-hack.h"
+
+#define SERVICE_ID 112
 #define UDP_PORT 1234
 
 
@@ -70,21 +75,20 @@ receiver(struct simple_udp_connection *c,
 }
 
 
-
-
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(anycast_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
-  static uip_ipaddr_t anycast_addr;
-  // static struct etimer wait_timer;
+  static uip_ipaddr_t addr;
 
   PROCESS_BEGIN();
 
+  uip_ip6addr(&addr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, 0x5403);
+
   SENSORS_ACTIVATE(button_sensor);
+  
   /* init the anycast module */
   init_uip_anycast();
-  create_anycast_addr(&anycast_addr);
 
   /* register the connection */
   simple_udp_register(&anycast_connection, UDP_PORT,
@@ -93,9 +97,6 @@ PROCESS_THREAD(anycast_process, ev, data)
 
   while(1)
   {
-    // etimer_set(&wait_timer, 10*CLOCK_SECOND);
-
-    // PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
     PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
     if(button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL) {
       static uint8_t msg_idx;
@@ -103,7 +104,7 @@ PROCESS_THREAD(anycast_process, ev, data)
       printf("Sending anycast %d\n", msg_idx);
       sprintf(buf, "Message %d", msg_idx);
       simple_udp_sendto(&anycast_connection, buf,
-                        strlen(buf) + 1, &anycast_addr);
+                        strlen(buf) + 1, &addr);
       msg_idx += 1;
     }
   }

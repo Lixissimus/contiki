@@ -21,7 +21,7 @@ init_uip_anycast()
 }
 
 void
-create_anycast_addr(uip_ipaddr_t *addr)
+uip_create_ipv6_anycast_addr(uip_ipaddr_t *addr)
 {
     /* use memcpy to avoid conversion from host to network byte order */
     memcpy(addr, &anycast_ip_addr, sizeof(anycast_ip_addr));

@@ -133,7 +133,7 @@ restore_anycast_wakeup_counter(struct secrdc_phase *phase)
   const uint32_t t_start = t_rec - t_strobe * potr_get_strobe_index_received();
   count.u32 = phase->his_wake_up_counter_at_t.u32 + (t_start - phase->t) / secrdc_get_wakeup_interval();
   // printf("his time: %d\n", rtimer_delta(t_start, phase->t) % secrdc_get_wakeup_interval());
-  printf("calc strobe time: %d\n", t_strobe);
+  // printf("calc strobe time: %d\n", t_strobe);
 
   switch(potr_get_last_anycast_type()) {
   case POTR_FRAME_TYPE_ANYCAST_EVEN_0:

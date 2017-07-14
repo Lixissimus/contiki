@@ -5,7 +5,7 @@
 
 
 void init_uip_anycast();
-void create_anycast_addr(uip_ipaddr_t *addr);
+void uip_create_ipv6_anycast_addr(uip_ipaddr_t *addr);
 int uip_is_anycast_addr(uip_ipaddr_t *addr);
 void uip_create_ll_anycast_addr(uip_lladdr_t *addr);
 int uip_is_anycast_ll_addr(uip_lladdr_t *addr);

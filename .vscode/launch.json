@@ -41,6 +41,28 @@
             "externalConsole": true
         },
         {
+            "name": "Login-3",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/tools/sky/serialdump-linux",
+            "args":["-b115200", "/dev/ttyUSB3"],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            // "preLaunchTask": "upload-3",
+            "externalConsole": true
+        },
+        {
+            "name": "Login-4",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/tools/sky/serialdump-linux",
+            "args":["-b115200", "/dev/ttyUSB4"],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            // "preLaunchTask": "upload-4",
+            "externalConsole": true
+        },
+        {
             "name": "Debug gdb",
             "type": "gdb",
             "request": "attach",

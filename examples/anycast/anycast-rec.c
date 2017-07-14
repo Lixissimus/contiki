@@ -44,8 +44,12 @@
 #include "net/ip/simple-udp.h"
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-anycast.h"
+#include "net/ipv6/uip-ds6.h"
+#include "net/ip/uip-debug.h"
 
 #include <stdio.h>
+
+#include "apps/servreg-hack/servreg-hack.h"
 
 #define UDP_PORT 1234
 
@@ -85,18 +89,22 @@ receiver(struct simple_udp_connection *c,
 PROCESS_THREAD(anycast_rec_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
+  uip_ipaddr_t ipaddr;
 
   PROCESS_BEGIN();
 
   /* init the anycast module */
   init_uip_anycast();
 
+  /* set ip address of receiver manually */
+  uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, 0x5403);
+  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
+
   /* register the connection */
   simple_udp_register(&anycast_connection, UDP_PORT,
                       NULL, UDP_PORT,
                       receiver);
 
-  printf("Hello from anycast receiver\n");
   while(1)
   {
     PROCESS_WAIT_EVENT();
