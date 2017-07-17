@@ -26,6 +26,13 @@
             "showOutput": "always"
         },
         {
+            "taskName": "build-network",
+            "command": "${workspaceRoot}/tools/cc2538-openmote/build-network.sh",
+            "isBackground": true,
+            "args": [],
+            "showOutput": "always"
+        },
+        {
             "taskName": "upload-0",
             "command": "${workspaceRoot}/tools/cc2538-bsl/cc2538-bsl.py",
             "isShellCommand": true,

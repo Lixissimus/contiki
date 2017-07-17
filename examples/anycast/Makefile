@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = anycast anycast-rec
+CONTIKI_PROJECT = anycast
 all: $(CONTIKI_PROJECT)
 
 DEBUG_CONF=1

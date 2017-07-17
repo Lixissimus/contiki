@@ -1227,7 +1227,6 @@ uip_process(uint8_t flag)
     goto process;
   case ORPL_ROUTE_UP:
     /* Not for us, continue routing */
-    /* Todo: reflect down the stack  */
     printf("uip6: continue routing\n");
     goto send;
     break;

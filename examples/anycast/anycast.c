@@ -40,26 +40,35 @@
 #include "contiki.h"
 
 #include "dev/button-sensor.h"
+#include "dev/leds.h"
 
 #include "net/ip/simple-udp.h"
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-anycast.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
+#include "net/linkaddr.h"
+
+#include "lib/random.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#include "apps/servreg-hack/servreg-hack.h"
-
 #define SERVICE_ID 112
 #define UDP_PORT 1234
+#define NETWORK_SIZE 3
 
-
+static struct ctimer off_timer;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(anycast_process, "Anycast process");
 AUTOSTART_PROCESSES(&anycast_process);
+
+static void
+leds_turn_off(void *d)
+{
+  leds_off(LEDS_ALL);
+}
 
 static void
 receiver(struct simple_udp_connection *c,
@@ -70,8 +79,14 @@ receiver(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  printf("Data received on port %d from port %d with length %d\n",
-         receiver_port, sender_port, datalen);
+  printf("Data received on port %d from port %d with length %d: %s\n",
+         receiver_port, sender_port, datalen, data);
+  leds_on(LEDS_ALL);
+  if(!ctimer_expired(&off_timer)) {
+    ctimer_restart(&off_timer);
+  } else {
+    ctimer_set(&off_timer, CLOCK_SECOND / 2, leds_turn_off, NULL);
+  }
 }
 
 
@@ -79,11 +94,14 @@ receiver(struct simple_udp_connection *c,
 PROCESS_THREAD(anycast_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
-  static uip_ipaddr_t addr;
-
+  
   PROCESS_BEGIN();
 
-  uip_ip6addr(&addr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, 0x5403);
+  static uint16_t own_id;
+  uip_ipaddr_t ipaddr;
+  own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
+  uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, own_id);
+  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
 
   SENSORS_ACTIVATE(button_sensor);
   
@@ -95,17 +113,28 @@ PROCESS_THREAD(anycast_process, ev, data)
                       NULL, UDP_PORT,
                       receiver);
 
+  printf("Hello from %d\n", own_id);
+
   while(1)
   {
-    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event && data == &button_sensor);
-    if(button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL) {
-      static uint8_t msg_idx;
-      char buf[127];
-      printf("Sending anycast %d\n", msg_idx);
-      sprintf(buf, "Message %d", msg_idx);
-      simple_udp_sendto(&anycast_connection, buf,
-                        strlen(buf) + 1, &addr);
-      msg_idx += 1;
+    PROCESS_WAIT_EVENT();
+    if(ev == sensors_event && data == &button_sensor) {
+      /* Send a message */
+      if(button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL) {
+        static uint8_t msg_idx;
+        char buf[127];
+        uip_ipaddr_t addr;
+        uint16_t dest_id;
+        do {
+          dest_id = random_rand() % NETWORK_SIZE + 1;
+        } while(dest_id == own_id);
+        uip_ip6addr(&addr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, dest_id);
+        printf("Sending anycast from %d to %d: %d\n", own_id, dest_id, msg_idx);
+        sprintf(buf, "Message %d", msg_idx);
+        simple_udp_sendto(&anycast_connection, buf,
+                          strlen(buf) + 1, &addr);
+        msg_idx += 1;
+      }
     }
   }
   

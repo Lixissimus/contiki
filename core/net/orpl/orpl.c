@@ -40,6 +40,8 @@
 #include "orpl.h"
 
 #include "net/ipv6/uip-ds6.h"
+#include "net/packetbuf.h"
+#include "net/linkaddr.h"
 
 #define DEBUG 0
 #if DEBUG && MAIN_DEBUG_CONF
@@ -54,10 +56,42 @@
  * secrdc.c interrupt routine. 
  */
 enum orpl_routing_decision
-/* orpl_should_receive(const linkaddr_t *src_addr, uint8_t type) */
 orpl_should_receive()
 {
-    return ORPL_ROUTE_KEEP;
+    uint8_t *p = packetbuf_hdrptr();
+    uint8_t type = p[0];
+    linkaddr_t addr;
+    uint16_t src_id;
+    uint16_t own_id;
+    p += 1;
+    memcpy(addr.u8, p, LINKADDR_SIZE);
+    src_id = (addr.u8[LINKADDR_SIZE-2] << 8) + addr.u8[LINKADDR_SIZE-1];
+    own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
+
+    /* some hardcoded network setup */
+    switch(own_id) {
+    case 0x0001:
+        if(src_id == 0x0003) {
+            PRINTF("keep\n");
+            return ORPL_ROUTE_KEEP;
+        }
+        PRINTF("reject\n");
+        return ORPL_ROUTE_REJECT;
+    case 0x0002:
+        if(src_id == 0x0003) {
+            PRINTF("keep\n");
+            return ORPL_ROUTE_KEEP;
+        }
+        PRINTF("reject\n");
+        return ORPL_ROUTE_REJECT;
+    case 0x0003:
+        PRINTF("keep\n");
+        return ORPL_ROUTE_KEEP;
+    default:
+        PRINTF("I am an unspecified node! :(\n");
+    }
+
+    return ORPL_ROUTE_REJECT;
 }
 
 /* Decide whether to route the packet upwards, 
