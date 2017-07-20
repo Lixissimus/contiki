@@ -61,7 +61,7 @@
   ((addr)->u16[5] == 0) &&				    \
   ((addr)->u16[6] == 0) &&				    \
   ((addr)->u8[14] == 0) &&				    \
-  ((addr)->u8[15] == 0x1a))
+  ((addr)->u8[15] == 0x1a)
 
 /** \brief Set IP address addr to the link-local, all-rpl-nodes
     multicast address. */

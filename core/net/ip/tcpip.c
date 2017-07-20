@@ -59,7 +59,7 @@
 
 #include <string.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #include "net/ip/uip-debug.h"
 
 #if UIP_LOGGING
@@ -556,14 +556,6 @@ tcpip_ipv6_output(void)
     return;
   }
 
-#if UIP_CONF_IPV6_RPL
-  if(!rpl_update_header()) {
-    /* Packet can not be forwarded */
-    PRINTF("tcpip_ipv6_output: RPL header update error\n");
-    uip_clear_buf();
-    return;
-  }
-#endif /* UIP_CONF_IPV6_RPL */
 
 #if ORPL_ENABLED
   /* Todo: fix, deactivate on-link optimization for now */
@@ -589,6 +581,16 @@ tcpip_ipv6_output(void)
   /* Todo: refactor this! */
   {
 #else
+
+#if UIP_CONF_IPV6_RPL
+  if(!rpl_update_header()) {
+    /* Packet can not be forwarded */
+    PRINTF("tcpip_ipv6_output: RPL header update error\n");
+    uip_clear_buf();
+    return;
+  }
+#endif /* UIP_CONF_IPV6_RPL */
+
   if(!uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Next hop determination */
 

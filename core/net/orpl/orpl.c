@@ -37,11 +37,18 @@
  *         Felix Wolff <lixissimus@gmail.com>
  */
 
-#include "orpl.h"
-
 #include "net/ipv6/uip-ds6.h"
 #include "net/packetbuf.h"
 #include "net/linkaddr.h"
+#include "net/ip/uip.h"
+#include "net/ip/simple-udp.h"
+#include "net/ipv6/uip-anycast.h"
+#include "net/rpl/rpl.h"
+#include "net/rpl/rpl-private.h"
+
+#include "orpl-routing-set.h"
+#include "orpl.h"
+#include <stdio.h>
 
 #define DEBUG 0
 #if DEBUG && MAIN_DEBUG_CONF
@@ -50,6 +57,23 @@
 #else /* DEBUG */
 #define PRINTF(...)
 #endif /* DEBUG */
+
+/* UDP port used for routing set broadcasting */
+#define ROUTING_SET_PORT 4444
+/* UDP connection used for routing set broadcasting */
+static struct simple_udp_connection routing_set_connection;
+/* Multicast IP address used for routing set broadcasting */
+static uip_ipaddr_t routing_set_addr;
+
+/* Rank changes of more than RANK_MAX_CHANGE trigger a trickle timer reset */
+#define RANK_MAX_CHANGE (2*EDC_DIVISOR)
+/* The last boradcasted EDC */
+static uint16_t last_broadcasted_edc = 0xffff;
+
+/* The current RPL instance */
+static rpl_instance_t *curr_instance;
+
+
 
 /* Decide whether we generally want to receive a
  * packet from that source. This is called from
@@ -68,25 +92,44 @@ orpl_should_receive()
     src_id = (addr.u8[LINKADDR_SIZE-2] << 8) + addr.u8[LINKADDR_SIZE-1];
     own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
 
+    rpl_rank_t src_rank = rpl_get_parent_rank((uip_lladdr_t *) &addr);
+    printf("orpl: src rank: %u\n", src_rank);
+
+    /* check if routing upwards by checking anycast type */
+    if(1) {
+        /* Todo: Include some minimal routing progress here */
+        if(src_rank > orpl_current_edc()) {
+            PRINTF("ORPL: keep packet, routing upwards\n");
+            return ORPL_ROUTE_KEEP;
+        } else {
+            PRINTF("ORPL: reject packet routing upwards\n");
+            return ORPL_ROUTE_REJECT;
+        }
+    } else {
+        PRINTF("ORPL: not routing upwards\n");
+        return ORPL_ROUTE_REJECT;
+    }
+
     /* some hardcoded network setup */
     switch(own_id) {
     case 0x0001:
-        if(src_id == 0x0003) {
+        if(src_id == 0x0002) {
             PRINTF("keep\n");
             return ORPL_ROUTE_KEEP;
         }
         PRINTF("reject\n");
         return ORPL_ROUTE_REJECT;
     case 0x0002:
-        if(src_id == 0x0003) {
+        return ORPL_ROUTE_KEEP;
+        PRINTF("keep\n");
+        return ORPL_ROUTE_REJECT;
+    case 0x0003:
+        if(src_id == 0x0002) {
             PRINTF("keep\n");
             return ORPL_ROUTE_KEEP;
         }
         PRINTF("reject\n");
         return ORPL_ROUTE_REJECT;
-    case 0x0003:
-        PRINTF("keep\n");
-        return ORPL_ROUTE_KEEP;
     default:
         PRINTF("I am an unspecified node! :(\n");
     }
@@ -100,9 +143,88 @@ orpl_should_receive()
 enum orpl_routing_decision
 orpl_make_routing_decision(uip_ipaddr_t *dest_addr)
 {
+    printf("decide\n");
     if(uip_ds6_is_my_addr(dest_addr)) {
         return ORPL_ROUTE_KEEP;
     }
+    
+    // if(uip_is_addr_linklocal_rplnodes_mcast(dest_addr)) {
+    //     return ORPL_ROUTE_KEEP;
+    // }
     /* just routing upwards for now */
     return ORPL_ROUTE_UP;
+}
+
+/* UDP callback function for received routing sets */
+static void
+udp_received_routing_set(struct simple_udp_connection *c,
+         const uip_ipaddr_t *sender_addr,
+         uint16_t sender_port,
+         const uip_ipaddr_t *receiver_addr,
+         uint16_t receiver_port,
+         const uint8_t *payload,
+         uint16_t datalen)
+{
+    /* Todo */
+}
+
+rpl_rank_t
+orpl_current_edc()
+{
+  rpl_dag_t *dag = rpl_get_any_dag();
+  return dag == NULL ? 0xffff : dag->rank;
+}
+
+void
+orpl_update_edc(rpl_rank_t edc)
+{
+    rpl_rank_t curr_edc = orpl_current_edc();
+    rpl_dag_t *dag = rpl_get_any_dag();
+
+    if(dag) {
+        dag->rank = edc;
+    }
+
+    PRINTF("ORPL: update edc to %d\n", edc);
+
+    /* Reset DIO timer if the edc changed significantly */
+    if(curr_instance && last_broadcasted_edc != 0xffff &&
+        ((last_broadcasted_edc > curr_edc && last_broadcasted_edc - curr_edc > RANK_MAX_CHANGE) ||
+        (curr_edc > last_broadcasted_edc && curr_edc - last_broadcasted_edc > RANK_MAX_CHANGE))) {
+        PRINTF("ORPL: reset DIO timer (edc changed from %u to %u)\n", last_broadcasted_edc, curr_edc);
+        last_broadcasted_edc = curr_edc;
+        rpl_reset_dio_timer(curr_instance);
+    }
+
+    /* Update EDC annotation */
+    if(edc != curr_edc) {
+        PRINTF("#A edc=%u.%u\n", edc/EDC_DIVISOR, (10 * (edc % EDC_DIVISOR)) / EDC_DIVISOR);
+    }
+
+    /* Update EDC */
+    curr_edc = edc;
+}
+
+void
+orpl_init(uint8_t is_root)
+{
+    /* Init the anycast module */
+    uip_anycast_init();
+    
+    /* Init RPL module */
+    rpl_init();
+
+    if(is_root) {
+        /* Root has rank of 0 */
+        orpl_update_edc(0);
+    }
+
+    /* Init the routing set */
+    orpl_routing_set_init();
+
+    /* Set up multicast UDP connectoin for dissemination of routing sets */
+    uip_create_linklocal_allnodes_mcast(&routing_set_addr);
+    simple_udp_register(&routing_set_connection, ROUTING_SET_PORT,
+            NULL, ROUTING_SET_PORT,
+            udp_received_routing_set);
 }

@@ -94,6 +94,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include "net/ipv6/uip-anycast.h"
 
 /*---------------------------------------------------------------------------*/
 /* For Debug, logging, statistics                                            */
@@ -1221,19 +1222,23 @@ uip_process(uint8_t flag)
 #endif /* UIP_IPV6_MULTICAST */
 
 #if ORPL_ENABLED
-  switch(orpl_make_routing_decision(&UIP_IP_BUF->destipaddr)) {
-  case ORPL_ROUTE_KEEP:
-    /* This packet is for us, deliver up the stack */
-    goto process;
-  case ORPL_ROUTE_UP:
-    /* Not for us, continue routing */
-    printf("uip6: continue routing\n");
-    goto send;
-    break;
-  case ORPL_ROUTE_DOWN:
-  case ORPL_ROUTE_REJECT:
-    /* not handled yet */
-    break;
+  /* We don't handle multicasts with ORPL */
+  if(!uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr)) {
+    switch(orpl_make_routing_decision(&UIP_IP_BUF->destipaddr)) {
+    case ORPL_ROUTE_KEEP:
+      /* This packet is for us, deliver up the stack */
+      printf("keep packet\n");
+      goto process;
+    case ORPL_ROUTE_UP:
+      /* Not for us, continue routing */
+      printf("route packet\n");
+      goto send;
+      break;
+    case ORPL_ROUTE_DOWN:
+    case ORPL_ROUTE_REJECT:
+      /* not handled yet */
+      break;
+    }
   }
 #endif /* ORPL_ENABLED */
 

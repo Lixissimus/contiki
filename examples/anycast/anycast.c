@@ -48,6 +48,7 @@
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
 #include "net/linkaddr.h"
+#include "net/orpl/orpl.h"
 
 #include "lib/random.h"
 
@@ -56,7 +57,8 @@
 
 #define SERVICE_ID 112
 #define UDP_PORT 1234
-#define NETWORK_SIZE 3
+#define NETWORK_SIZE 2
+#define ROOT_ID 1
 
 static struct ctimer off_timer;
 
@@ -102,11 +104,18 @@ PROCESS_THREAD(anycast_process, ev, data)
   own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
   uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, own_id);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
+    
 
   SENSORS_ACTIVATE(button_sensor);
+
+  if(own_id == ROOT_ID) {
+    rpl_dag_t *dag = rpl_set_root(RPL_DEFAULT_INSTANCE, &ipaddr);
+    rpl_set_prefix(dag, &ipaddr, 64);
+    NETSTACK_RDC.off(1);
+  }
   
-  /* init the anycast module */
-  init_uip_anycast();
+  /* init the ORPL module */
+  orpl_init(own_id == ROOT_ID);
 
   /* register the connection */
   simple_udp_register(&anycast_connection, UDP_PORT,
@@ -115,8 +124,7 @@ PROCESS_THREAD(anycast_process, ev, data)
 
   printf("Hello from %d\n", own_id);
 
-  while(1)
-  {
+  while(1) {
     PROCESS_WAIT_EVENT();
     if(ev == sensors_event && data == &button_sensor) {
       /* Send a message */
@@ -125,14 +133,26 @@ PROCESS_THREAD(anycast_process, ev, data)
         char buf[127];
         uip_ipaddr_t addr;
         uint16_t dest_id;
-        do {
-          dest_id = random_rand() % NETWORK_SIZE + 1;
-        } while(dest_id == own_id);
+
+        if(orpl_current_edc() == 0xffff) {
+          printf("Node is not in DODAG\n");
+          // continue;
+        } else {
+          printf("current edc: %d\n", orpl_current_edc());
+        }
+
+        // do {
+        //   dest_id = random_rand() % NETWORK_SIZE + 1;
+        // } while(dest_id == own_id);
+
+        /* Only traffic to root */
+        dest_id = ROOT_ID;
+
         uip_ip6addr(&addr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, dest_id);
         printf("Sending anycast from %d to %d: %d\n", own_id, dest_id, msg_idx);
+        print_addr(&addr);
         sprintf(buf, "Message %d", msg_idx);
-        simple_udp_sendto(&anycast_connection, buf,
-                          strlen(buf) + 1, &addr);
+        simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
         msg_idx += 1;
       }
     }

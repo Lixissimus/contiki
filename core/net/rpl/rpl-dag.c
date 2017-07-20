@@ -58,7 +58,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG 1
 #include "net/ip/uip-debug.h"
 
 /* A configurable function called after every RPL parent switch */
@@ -1541,7 +1541,11 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
     if(dio->rank != INFINITE_RANK) {
       instance->dio_counter++;
     }
-    return;
+#if !ORPL_ENABLED
+    /* With ORPL we want to have neighbors in the "rpl_parents"
+    table as we need their rank and ackcount for routing set. */
+    return; 
+#endif /* ORPL_ENABLED */
   }
 
   /* The DIO comes from a valid DAG, we can refresh its lifetime */
@@ -1587,6 +1591,13 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
     }
   }
   p->rank = dio->rank;
+
+#if ORPL_ENABLED
+  if(dag->rank == ROOT_RANK(instance)) {
+    /* We have added the parent, now return if we are root */
+    return;
+  }
+#endif /* ORPL_ENABLED */
 
   if(dio->rank == INFINITE_RANK && p == dag->preferred_parent) {
     /* Our preferred parent advertised an infinite rank, reset DIO timer */

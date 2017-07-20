@@ -6,7 +6,7 @@ static uip_ipaddr_t anycast_ip_addr;
 static uip_lladdr_t anycast_ll_addr;
 
 void
-init_uip_anycast()
+uip_anycast_init()
 {
     uip_ip6addr(&anycast_ip_addr, 0xff00, 0, 0, 0, 0, 0, 0, 0x0001);
     anycast_ll_addr.addr[0] = 0xfe;

@@ -94,7 +94,7 @@ PROCESS_THREAD(anycast_rec_process, ev, data)
   PROCESS_BEGIN();
 
   /* init the anycast module */
-  init_uip_anycast();
+  uip_anycast_init();
 
   /* set ip address of receiver manually */
   uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, 0x5403);

@@ -21,3 +21,6 @@ for dev in $( ls /dev | xargs -n 1 basename | grep ttyUSB ); do
     
     let id=id+1
 done
+
+# build for node 1 again to have this as debugging binary
+make -s -C "$base/$program_dir" "NODEID=0x0001"

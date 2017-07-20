@@ -37,6 +37,9 @@
  *         Felix Wolff <lixissimus@gmail.com>
  */
 
+/* some defines from orpl legacy code */
+// #include "orpl-contiki-conf.h"
+
 /* enable anycast support */
 #undef POTR_CONF_WITH_ANYCAST
 #define POTR_CONF_WITH_ANYCAST 1
@@ -44,6 +47,22 @@
 /* disable RPL */
 #undef UIP_CONF_IPV6_RPL
 #define UIP_CONF_IPV6_RPL 0
+
+/* this also sets the root's rank to 0 */
+#undef RPL_CONF_MIN_HOPRANKINC
+#define RPL_CONF_MIN_HOPRANKINC 0
+
+/* ORPL does not use RPL's normal downwards routing */
+#undef RPL_CONF_MOP
+#define RPL_CONF_MOP RPL_MOP_NO_DOWNWARD_ROUTES
+
+/* use bitmap as routing set type */
+#undef OPRL_CONF_RS_TYPE
+#define OPRL_CONF_RS_TYPE ORPL_RS_TYPE_BITMAP
+
+/* define size of routing set */
+#undef ORPL_CONF_ROUTING_SET_M
+#define ORPL_CONF_ROUTING_SET_M 128
 
 /* enable ORPL */
 #undef ORPL_ENABLED

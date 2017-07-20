@@ -42,6 +42,10 @@
 
 #include "net/linkaddr.h"
 #include "net/ip/uip.h"
+#include "net/rpl/rpl.h"
+
+/* Fixed point divisor */
+#define EDC_DIVISOR 128
 
 enum orpl_routing_decision {
   ORPL_ROUTE_UP,
@@ -50,8 +54,16 @@ enum orpl_routing_decision {
   ORPL_ROUTE_REJECT
 };
 
-/* int orpl_should_receive(const linkaddr_t *src_addr, uint8_t type); */
 enum orpl_routing_decision orpl_should_receive();
 enum orpl_routing_decision orpl_make_routing_decision(uip_ipaddr_t *dest_addr);
+
+/* Initialize the ORPL module */
+void orpl_init(uint8_t is_root);
+
+/* Update the rank of a node  */
+void orpl_update_edc(rpl_rank_t edc);
+
+/* Get the current edc or 0xffff, if we are not part of any DODAG */
+rpl_rank_t orpl_current_edc();
 
 #endif /* ORPL_H_ */
