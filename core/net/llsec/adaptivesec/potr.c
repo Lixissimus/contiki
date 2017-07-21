@@ -103,6 +103,7 @@ static linkaddr_t sender_of_last_accepted_broadcast;
 static ilocs_wake_up_counter_t wake_up_counter_at_last_accepted_broadcast;
 #endif /* ILOCS_ENABLED */
 #if POTR_CONF_WITH_ANYCAST
+static uint8_t anycast_ll_addr[LINKADDR_SIZE] = POTR_LL_ANYCAST_ADDR;
 static uint8_t last_anycast_type;
 static uint8_t strobe_index_received;
 #endif /* POTR_CONF_WITH_ANYCAST */
@@ -115,6 +116,18 @@ potr_set_seqno(struct akes_nbr *receiver)
 }
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
+void
+potr_create_ll_anycast_addr(linkaddr_t *addr)
+{
+  memcpy(addr, anycast_ll_addr, LINKADDR_SIZE);
+}
+/*---------------------------------------------------------------------------*/
+int
+potr_is_ll_anycast_addr(const linkaddr_t *addr)
+{
+  return (memcmp(addr, anycast_ll_addr, LINKADDR_SIZE) == 0);
+}
+/*---------------------------------------------------------------------------*/
 uint8_t
 potr_get_last_anycast_type(void)
 {

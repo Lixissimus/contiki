@@ -70,6 +70,10 @@
 #include "net/ipv6/sicslowpan.h"
 #include "net/netstack.h"
 
+#if POTR_CONF_WITH_ANYCAST
+#include "net/llsec/adaptivesec/potr.h"
+#endif /* POTR_CONF_WITH_ANYCAST */
+
 #include <stdio.h>
 
 #define DEBUG 0
@@ -1318,9 +1322,13 @@ output(const uip_lladdr_t *localdest)
    */
   if(localdest == NULL) {
     linkaddr_copy(&dest, &linkaddr_null);
-  } else if(linkaddr_cmp((const linkaddr_t *)localdest, &linkaddr_anycast)) {
+  // } else if(linkaddr_cmp((const linkaddr_t *)localdest, &linkaddr_anycast)) {
+#if POTR_CONF_WITH_ANYCAST
+  } else if(potr_is_ll_anycast_addr((const linkaddr_t *)localdest)) {
     PRINTF("sicslowpan output: detected anycast\n");
-    linkaddr_copy(&dest, &linkaddr_anycast);
+    // linkaddr_copy(&dest, &linkaddr_anycast);
+    potr_create_ll_anycast_addr(&dest);
+#endif /* POTR_CONF_WITH_ANYCASY */
   } else {
     linkaddr_copy(&dest, (const linkaddr_t *)localdest);
   }

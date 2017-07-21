@@ -69,6 +69,19 @@
 #endif /* LLSEC802154_USES_AUX_HEADER */
 #endif /* ILOCS_ENABLED */
 
+#if POTR_CONF_WITH_ANYCAST
+#ifdef POTR_CONF_LL_ANYCAST_ADDR
+#define POTR_LL_ANYCAST_ADDR POTR_CONF_LL_ANYCAST_ADDR
+#else /* POTR_CONF_LL_ANYCAST_ADDR */
+#if LINKADDR_SIZE == 8
+#define POTR_LL_ANYCAST_ADDR { 0xfe , 0xfe , 0xfe , 0xfe , \
+                               0xfe , 0xfe , 0xfe , 0xfe }
+#else /* LINKADDR_SIZE == 8 */
+#error "Potr-Anycast just works with LINKADDR_SIZE == 8"
+#endif /* LINKADDR_SIZE == 8 */
+#endif /* POTR_CONF_LL_ANYCAST_ADDR */
+#endif /* POTR_CONF_WITH_ANYCAST */
+
 #define POTR_HEADER_LEN (1 \
                          + LINKADDR_SIZE \
                          + POTR_FRAME_COUNTER_LEN \
@@ -111,6 +124,8 @@ int potr_parse_and_validate(void);
 int potr_is_helloack(void);
 int potr_is_ack(void);
 #if POTR_CONF_WITH_ANYCAST
+void potr_create_ll_anycast_addr(linkaddr_t *addr);
+int potr_is_ll_anycast_addr(const linkaddr_t *addr);
 int potr_is_anycast(void);
 uint8_t potr_get_last_anycast_type(void);
 uint8_t potr_get_strobe_index_received(void);

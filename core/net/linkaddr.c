@@ -43,6 +43,7 @@
  */
 
 #include "net/linkaddr.h"
+#include "net/llsec/adaptivesec/potr.h"
 #include <string.h>
 
 #include <stdio.h>
@@ -50,19 +51,15 @@
 linkaddr_t linkaddr_node_addr;
 #if LINKADDR_SIZE == 1
 const linkaddr_t linkaddr_null = { { 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe }};
 #elif LINKADDR_SIZE == 2
 const linkaddr_t linkaddr_null = { { 0, 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe, 0xfe }};
 #else /*LINKADDR_SIZE == 2*/
 #if LINKADDR_SIZE == 8
 const linkaddr_t linkaddr_null = { { 0, 0, 0, 0, 0, 0, 0, 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe }};
-// const linkaddr_t linkaddr_anycast = { { 0xef, 0xef, 0xef, 0xef, 0xef, 0xef, 0xef, 0xef }};
+const linkaddr_t linkaddr_anycast = { POTR_LL_ANYCAST_ADDR };
 #endif /*LINKADDR_SIZE == 8*/
 #if LINKADDR_SIZE == 6
 const linkaddr_t linkaddr_null = { { 0, 0, 0, 0, 0, 0 } };
-const linkaddr_t linkaddr_anycast = { { 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe}};
 #endif /*LINKADDR_SIZE == 6*/
 #endif /*LINKADDR_SIZE == 2*/
 

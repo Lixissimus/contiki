@@ -42,7 +42,6 @@
 #include "net/linkaddr.h"
 #include "net/ip/uip.h"
 #include "net/ip/simple-udp.h"
-#include "net/ipv6/uip-anycast.h"
 #include "net/rpl/rpl.h"
 #include "net/rpl/rpl-private.h"
 
@@ -207,10 +206,7 @@ orpl_update_edc(rpl_rank_t edc)
 
 void
 orpl_init(uint8_t is_root)
-{
-    /* Init the anycast module */
-    uip_anycast_init();
-    
+{    
     /* Init RPL module */
     rpl_init();
 

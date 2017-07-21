@@ -53,7 +53,7 @@
 #endif
 
 #if POTR_CONF_WITH_ANYCAST
-#include "net/ipv6/uip-anycast.h"
+#include "net/llsec/adaptivesec/potr.h"
 #include <stdio.h>
 #endif
 
@@ -536,9 +536,6 @@ tcpip_ipv6_output(void)
 {
   uip_ds6_nbr_t *nbr = NULL;
   uip_ipaddr_t *nexthop = NULL;
-#if ORPL_ENABLED
-  uip_ipaddr_t anycast_ip_addr;
-#endif /* ORPL_ENABLED */
 
   if(uip_len == 0) {
     return;
@@ -573,7 +570,7 @@ tcpip_ipv6_output(void)
     /* We do anycast routing */
     PRINTF("tcpip: anycast routing\n");
     uip_lladdr_t anycast_ll_addr;
-    uip_create_ll_anycast_addr(&anycast_ll_addr);
+    potr_create_ll_anycast_addr((linkaddr_t *)&anycast_ll_addr);
     tcpip_output(&anycast_ll_addr);
     uip_clear_buf();
     return;    

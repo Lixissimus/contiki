@@ -44,7 +44,6 @@
 
 #include "net/ip/simple-udp.h"
 #include "net/ip/uip.h"
-#include "net/ipv6/uip-anycast.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
 #include "net/linkaddr.h"
@@ -111,7 +110,7 @@ PROCESS_THREAD(anycast_process, ev, data)
   if(own_id == ROOT_ID) {
     rpl_dag_t *dag = rpl_set_root(RPL_DEFAULT_INSTANCE, &ipaddr);
     rpl_set_prefix(dag, &ipaddr, 64);
-    NETSTACK_RDC.off(1);
+    // NETSTACK_RDC.off(1);
   }
   
   /* init the ORPL module */
@@ -150,7 +149,6 @@ PROCESS_THREAD(anycast_process, ev, data)
 
         uip_ip6addr(&addr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, dest_id);
         printf("Sending anycast from %d to %d: %d\n", own_id, dest_id, msg_idx);
-        print_addr(&addr);
         sprintf(buf, "Message %d", msg_idx);
         simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
         msg_idx += 1;
