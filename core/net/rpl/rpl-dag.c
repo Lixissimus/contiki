@@ -58,7 +58,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #include "net/ip/uip-debug.h"
 
 /* A configurable function called after every RPL parent switch */
@@ -158,6 +158,17 @@ rpl_get_parent_rank(uip_lladdr_t *addr)
     return INFINITE_RANK;
   }
 }
+/*---------------------------------------------------------------------------*/
+#if ORPL_ENABLED
+void
+rpl_set_parent_rank(const uip_lladdr_t *addr, rpl_rank_t rank)
+{
+  rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (linkaddr_t *)addr);
+  if(p != NULL) {
+    p->rank = rank;
+  }
+}
+#endif /* ORPL_ENABLED */
 /*---------------------------------------------------------------------------*/
 uint16_t
 rpl_get_parent_link_metric(rpl_parent_t *p)

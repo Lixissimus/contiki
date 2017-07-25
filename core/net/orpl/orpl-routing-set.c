@@ -121,12 +121,11 @@ orpl_routing_set_get_active() {
   return &routing_sets[active_index];
 }
 
-/* Inserts a global IPv6 in the global double routing set */
+/* Inserts an id in the global double routing set */
 void
-orpl_routing_set_insert(const uip_ipaddr_t *ipv6)
+orpl_routing_set_insert(uint64_t hash)
 {
   int k;
-  uint64_t hash = get_hash(ipv6);
   /* For each hash, set a bit in both routing sets */
   for(k=0; k<ROUTING_SET_K; k++) {
     rs_set_bit(&routing_sets[0], hash % ROUTING_SET_M);

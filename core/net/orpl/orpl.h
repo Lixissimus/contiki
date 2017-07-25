@@ -66,4 +66,12 @@ void orpl_update_edc(rpl_rank_t edc);
 /* Get the current edc or 0xffff, if we are not part of any DODAG */
 rpl_rank_t orpl_current_edc();
 
+/* Called from RPL trickle callback */
+void orpl_trickle_callback(rpl_instance_t *instance);
+
+/* Flag used to tell lower layers that the current UDP transmission
+ * is a routing set, so that the desired callback function is called
+ * after each transmission attempt */
+extern int sending_routing_set;
+
 #endif /* ORPL_H_ */

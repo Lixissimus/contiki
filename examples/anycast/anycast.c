@@ -61,6 +61,18 @@
 
 static struct ctimer off_timer;
 
+static uint16_t ip_prefix[] = { UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, 0 };
+
+#define ip_from_id(dest, id) uip_ip6addr(dest,  \
+    ip_prefix[0],                               \
+    ip_prefix[1],                               \
+    ip_prefix[2],                               \
+    ip_prefix[3],                               \
+    ip_prefix[4],                               \
+    ip_prefix[5],                               \
+    ip_prefix[6],                               \
+    id)
+
 /*---------------------------------------------------------------------------*/
 PROCESS(anycast_process, "Anycast process");
 AUTOSTART_PROCESSES(&anycast_process);
@@ -98,10 +110,15 @@ PROCESS_THREAD(anycast_process, ev, data)
   
   PROCESS_BEGIN();
 
+  if(LINKADDR_SIZE != 8) {
+    printf("This example only works with LINKADDR_SIZE 8\n");
+    PROCESS_EXIT();
+  }
+
   static uint16_t own_id;
   uip_ipaddr_t ipaddr;
   own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
-  uip_ip6addr(&ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, own_id);
+  ip_from_id(&ipaddr, own_id);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
     
 
@@ -147,7 +164,7 @@ PROCESS_THREAD(anycast_process, ev, data)
         /* Only traffic to root */
         dest_id = ROOT_ID;
 
-        uip_ip6addr(&addr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, dest_id);
+        ip_from_id(&addr, dest_id);
         printf("Sending anycast from %d to %d: %d\n", own_id, dest_id, msg_idx);
         sprintf(buf, "Message %d", msg_idx);
         simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);

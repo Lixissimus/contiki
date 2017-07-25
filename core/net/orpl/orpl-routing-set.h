@@ -89,8 +89,8 @@ struct routing_set_s {
 void orpl_routing_set_init();
 /* Returns a pointer to the currently active routing set */
 struct routing_set_s *orpl_routing_set_get_active();
-/* Inserts a global IPv6 in the global double routing set */
-void orpl_routing_set_insert(const uip_ipaddr_t *ipv6);
+/* Inserts an id into the global double routing set */
+void orpl_routing_set_insert(uint64_t hash);
 /* Merges a routing set into our global double routing set */
 void orpl_routing_set_merge(const struct routing_set_s *rs);
 /* Checks if our global double bloom filter contains an given IPv6 */

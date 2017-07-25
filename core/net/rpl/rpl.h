@@ -288,6 +288,9 @@ const linkaddr_t *rpl_get_parent_lladdr(rpl_parent_t *p);
 uip_ipaddr_t *rpl_get_parent_ipaddr(rpl_parent_t *nbr);
 rpl_parent_t *rpl_get_parent(uip_lladdr_t *addr);
 rpl_rank_t rpl_get_parent_rank(uip_lladdr_t *addr);
+#if ORPL_ENABLED
+void rpl_set_parent_rank(const uip_lladdr_t *addr, rpl_rank_t rank);
+#endif /* ORPL_ENABLED */
 void rpl_dag_init(void);
 uip_ds6_nbr_t *rpl_get_nbr(rpl_parent_t *parent);
 void rpl_print_neighbor_list(void);

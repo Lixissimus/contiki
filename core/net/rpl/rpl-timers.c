@@ -49,6 +49,10 @@
 #include "lib/random.h"
 #include "sys/ctimer.h"
 
+#if ORPL_ENABLED
+#include "net/orpl/orpl.h"
+#endif /* ORPL_ENABLED */
+
 #define DEBUG 0
 #include "net/ip/uip-debug.h"
 
@@ -179,6 +183,9 @@ handle_dio_timer(void *ptr)
       instance->dio_totsend++;
 #endif /* RPL_CONF_STATS */
       dio_output(instance, NULL);
+#if ORPL_ENABLED
+      orpl_trickle_callback(instance);
+#endif /* ORPL_ENABLED */
     } else {
       PRINTF("RPL: Suppressing DIO transmission (%d >= %d)\n",
              instance->dio_counter, instance->dio_redundancy);
