@@ -80,7 +80,9 @@
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/multicast/uip-mcast6.h"
 
+#if ORPL_ENABLED
 #include "net/orpl/orpl.h"
+#endif /* ORPL_ENABLED */
 
 #if UIP_CONF_IPV6_RPL
 #include "rpl/rpl.h"

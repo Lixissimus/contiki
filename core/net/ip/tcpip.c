@@ -553,32 +553,6 @@ tcpip_ipv6_output(void)
     return;
   }
 
-
-#if ORPL_ENABLED
-  /* Todo: fix, deactivate on-link optimization for now */
-  if(uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr) && 0){
-    /* Direct neighbor, just use it as next hop */
-    PRINTF("tcpip: onlink routing\n");
-    nexthop = &UIP_IP_BUF->destipaddr;
-  } else if(uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
-    /* Multicast, no routing required */
-    PRINTF("tcpip: multicast routing\n");
-    tcpip_output(NULL);
-    uip_clear_buf();
-    return;
-  } else {
-    /* We do anycast routing */
-    PRINTF("tcpip: anycast routing\n");
-    uip_lladdr_t anycast_ll_addr;
-    potr_create_ll_anycast_addr((linkaddr_t *)&anycast_ll_addr);
-    tcpip_output(&anycast_ll_addr);
-    uip_clear_buf();
-    return;    
-  }
-  /* Todo: refactor this! */
-  {
-#else
-
 #if UIP_CONF_IPV6_RPL
   if(!rpl_update_header()) {
     /* Packet can not be forwarded */
@@ -587,6 +561,7 @@ tcpip_ipv6_output(void)
     return;
   }
 #endif /* UIP_CONF_IPV6_RPL */
+
 
   if(!uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Next hop determination */
@@ -604,9 +579,20 @@ tcpip_ipv6_output(void)
     /* We first check if the destination address is on our immediate
        link. If so, we simply use the destination address as our
        nexthop address. */
-    if(nexthop == NULL && uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr)){
+    if(nexthop == NULL && uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr) && 0){
       nexthop = &UIP_IP_BUF->destipaddr;
     }
+#if ORPL_ENABLED
+    else {
+      /* We do anycast routing */
+      PRINTF("tcpip: anycast routing\n");
+      uip_lladdr_t anycast_ll_addr;
+      potr_create_ll_anycast_addr((linkaddr_t *)&anycast_ll_addr);
+      tcpip_output(&anycast_ll_addr);
+      uip_clear_buf();
+      return;
+    }
+#endif /* ORPL_ENABLED */
 
     if(nexthop == NULL) {
       uip_ds6_route_t *route;
@@ -688,8 +674,6 @@ tcpip_ipv6_output(void)
       }
 #endif /* TCPIP_CONF_ANNOTATE_TRANSMISSIONS */
     }
-
-#endif /* ORPL_ENABLED */
 
     /* End of next hop determination */
 

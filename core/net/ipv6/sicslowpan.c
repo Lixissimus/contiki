@@ -78,7 +78,7 @@
 
 #define DEBUG 0
 #include "net/ip/uip-debug.h"
-#if DEBUG && MAIN_DEBUG_CONF
+#if DEBUG
 /* PRINTFI and PRINTFO are defined for input and output to debug one without changing the timing of the other */
 uint8_t p;
 #include <stdio.h>

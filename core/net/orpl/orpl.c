@@ -84,19 +84,19 @@ orpl_should_receive()
     uint8_t *p = packetbuf_hdrptr();
     uint8_t type = p[0];
     linkaddr_t addr;
-    uint16_t src_id;
-    uint16_t own_id;
+    // uint16_t src_id;
+    // uint16_t own_id;
     p += 1;
     memcpy(addr.u8, p, LINKADDR_SIZE);
-    src_id = (addr.u8[LINKADDR_SIZE-2] << 8) + addr.u8[LINKADDR_SIZE-1];
-    own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
+    // src_id = (addr.u8[LINKADDR_SIZE-2] << 8) + addr.u8[LINKADDR_SIZE-1];
+    // own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
 
     rpl_rank_t src_rank = rpl_get_parent_rank((uip_lladdr_t *) &addr);
-    printf("orpl: src rank: %u\n", src_rank);
+    // printf("orpl: src rank: %u\n", src_rank);
 
     /* check if routing upwards by checking anycast type */
     if(1) {
-        /* Todo: Include some minimal routing progress here */
+        /* Todo: Enforce some minimal routing progress here */
         if(src_rank > orpl_current_edc()) {
             PRINTF("ORPL: keep packet, routing upwards\n");
             return ORPL_ROUTE_KEEP;
@@ -105,12 +105,13 @@ orpl_should_receive()
             return ORPL_ROUTE_REJECT;
         }
     } else {
-        PRINTF("ORPL: not routing upwards\n");
+        PRINTF("ORPL: downwards routing not implemented yet\n");
         return ORPL_ROUTE_REJECT;
+        /* for downwards routing enforce src_rank < orpl_current_edc() */
     }
 
     /* some hardcoded network setup */
-    switch(own_id) {
+    /* switch(own_id) {
     case 0x0001:
         if(src_id == 0x0002) {
             PRINTF("keep\n");
@@ -131,7 +132,7 @@ orpl_should_receive()
         return ORPL_ROUTE_REJECT;
     default:
         PRINTF("I am an unspecified node! :(\n");
-    }
+    } */
 
     return ORPL_ROUTE_REJECT;
 }

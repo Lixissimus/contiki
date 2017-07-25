@@ -59,7 +59,10 @@
 #endif /* LPM_CONF_ENABLE */
 #include "lib/random.h"
 #include "lib/csprng.h"
+
+#if ORPL_ENABLED
 #include "net/orpl/orpl.h"
+#endif /* ORPL_ENABLED */
 
 #include <stdio.h>
 
@@ -664,9 +667,8 @@ on_fifop(void)
 #if POTR_CONF_WITH_ANYCAST
         u.duty_cycle.is_anycast = potr_is_anycast();
 #if ORPL_ENABLED
-        if(u.duty_cycle.is_anycast && !(orpl_should_receive() == ORPL_ROUTE_KEEP)) {
+        if(u.duty_cycle.is_anycast && (orpl_should_receive() != ORPL_ROUTE_KEEP)) {
           disable_and_reset_radio();
-          // PRINTF("secrdc: routing decided to rejecte frame of length %i\n");
           finish_duty_cycle();
         } else {
 #endif /* ORPL_ENABLED */
@@ -1372,6 +1374,7 @@ strobe(void)
     /* busy waiting for better timing */
     while(!rtimer_has_timed_out(u.strobe.next_transmission));
 
+#if POTR_CONF_WITH_ANYCAST
     if(u.strobe.is_anycast && u.strobe.strobes && !real_strobe_time) {
       if(!last_strobe_time) {
         last_strobe_time = RTIMER_NOW();
@@ -1379,6 +1382,7 @@ strobe(void)
         real_strobe_time = RTIMER_NOW() - last_strobe_time;
       }
     }
+#endif /* POTR_CONF_WITH_ANYCAST */
     if(transmit() != RADIO_TX_OK) {
       PRINTF("secrdc: NETSTACK_RADIO_ASYNC.transmit failed\n");
       u.strobe.result = MAC_TX_ERR;
