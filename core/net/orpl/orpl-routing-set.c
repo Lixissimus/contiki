@@ -44,6 +44,7 @@
 #include "node-id.h"
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 
 /* We maintain two routing sets, one "active" and one "warmup" to implement ageing. */
@@ -62,8 +63,9 @@ static int active_index;
 static uint64_t
 get_hash(const uip_ipaddr_t *ipv6)
 {
-    return 0x0000000000000001;
-//   return ORPL_LOG_NODEID_FROM_IPADDR(ipv6);
+  uint64_t hash = 0;
+  hash += (ipv6->u8[14] << 8) + ipv6->u8[15];
+  return hash;
 }
 
 #elif ORPL_RS_TYPE == ORPL_RS_TYPE_BLOOM_SAX
@@ -123,9 +125,11 @@ orpl_routing_set_get_active() {
 
 /* Inserts an id in the global double routing set */
 void
-orpl_routing_set_insert(uint64_t hash)
+orpl_routing_set_insert(const uip_ipaddr_t *addr)
 {
   int k;
+  uint64_t hash = get_hash(addr);
+  printf("ORPL: Insert %" PRIu64 " into routing set\n", hash);
   /* For each hash, set a bit in both routing sets */
   for(k=0; k<ROUTING_SET_K; k++) {
     rs_set_bit(&routing_sets[0], hash % ROUTING_SET_M);

@@ -179,14 +179,18 @@ udp_received_routing_set(struct simple_udp_connection *c,
   if(orpl_current_edc() < neighbor_edc) {
     /* Insert the neighbor in our routing set */
     /* Currently id is last 2 byte of ip address */
-    uint16_t neighbor_id = (sender_addr->u8[14] << 8) + sender_addr->u8[15];
-    orpl_routing_set_insert(neighbor_id);
-    PRINTF("ORPL: inserting neighbor into routing set: %u\n", neighbor_id);
+    // uint16_t neighbor_id = (sender_addr->u8[14] << 8) + sender_addr->u8[15];
+    orpl_routing_set_insert(sender_addr);
+    PRINTF("ORPL: inserting neighbor into routing set:");
+    PRINT6ADDR(sender_addr);
+    PRINTF("\n");
 
     /* The neighbor is a child, merge its routing set into ours */ \
     orpl_routing_set_merge((const struct routing_set_s *)
       &((struct routing_set_broadcast_s*)data)->rs);
-    PRINTF("ORPL: merging routing set from: %u\n", neighbor_id);
+    PRINTF("ORPL: merging routing set from:");
+    PRINT6ADDR(sender_addr);
+    PRINTF("\n");
   }
 
   /* Broadcast our routing set again if it has changed */
