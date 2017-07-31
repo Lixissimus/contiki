@@ -42,17 +42,20 @@
 #include "contiki.h"
 #include "contiki-net.h"
 #include "rest-engine.h"
+#include "net/ip/uip.h"
+#include "net/ipv6/uip-ds6.h"
+#include "net/ip/uip-debug.h"
 
 #if PLATFORM_HAS_BUTTON
 #include "dev/button-sensor.h"
 #endif
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
-#define PRINTLLADDR(lladdr) PRINTF("[%02x:%02x:%02x:%02x:%02x:%02x]", (lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3], (lladdr)->addr[4], (lladdr)->addr[5])
+// #define PRINTF(...) printf(__VA_ARGS__)
+// #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
+// #define PRINTLLADDR(lladdr) PRINTF("[%02x:%02x:%02x:%02x:%02x:%02x]", (lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3], (lladdr)->addr[4], (lladdr)->addr[5])
 #else
 #define PRINTF(...)
 #define PRINT6ADDR(addr)
@@ -107,6 +110,23 @@ extern resource_t res_sht21;
 #include "dev/max44009.h"
 extern resource_t res_max44009;
 #endif
+
+static void
+print_local_addresses(void) {
+  int i;
+  uint8_t state;
+
+  PRINTF("Server IPv6 addresses:\n");
+  for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
+    state = uip_ds6_if.addr_list[i].state;
+    if(uip_ds6_if.addr_list[i].isused &&
+       (state == ADDR_TENTATIVE || state == ADDR_PREFERRED)) {
+      PRINTF(" ");
+      uip_debug_ipaddr_print(&uip_ds6_if.addr_list[i].ipaddr);
+      PRINTF("\n");
+    }
+  }
+}
 
 PROCESS(er_example_server, "Erbium Example Server");
 AUTOSTART_PROCESSES(&er_example_server);
@@ -186,6 +206,14 @@ PROCESS_THREAD(er_example_server, ev, data)
   while(1) {
     PROCESS_WAIT_EVENT();
 #if PLATFORM_HAS_BUTTON
+    if(ev == sensors_event && data == &button_sensor) {
+      PRINTF("*******BUTTON*******\n");
+      print_local_addresses();
+
+      /* Call the event_handler for this application-specific event. */
+      res_event.trigger();
+
+    }
     if(ev == sensors_event && data == &button_sensor) {
       PRINTF("*******BUTTON*******\n");
 
