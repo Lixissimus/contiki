@@ -9,6 +9,26 @@
             "isShellCommand": true,
             "args": ["-C", "${fileDirname}"],
             "showOutput": "always",
+            "isBuildCommand": true,
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": ["relative", "${fileDirname}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        },
+        {
+            "taskName": "clean",
+            "command": "make",
+            "isShellCommand": true,
+            "args": ["-C", "${fileDirname}", "clean"],
+            "showOutput": "always",
             "isBuildCommand": true
         },
         {
@@ -30,7 +50,19 @@
             "command": "${workspaceRoot}/tools/cc2538-openmote/build-network.sh",
             "isBackground": true,
             "args": [],
-            "showOutput": "always"
+            "showOutput": "always",
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": ["relative", "${workspaceRoot}/examples/anycast"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
         },
         {
             "taskName": "upload-0",

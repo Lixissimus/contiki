@@ -111,7 +111,7 @@ enum orpl_routing_decision
 orpl_should_receive()
 {
   uint8_t *p = packetbuf_hdrptr();
-  uint8_t type = p[0];
+  // uint8_t type = p[0];
   linkaddr_t addr;
   p += 1;
   memcpy(addr.u8, p, LINKADDR_SIZE);

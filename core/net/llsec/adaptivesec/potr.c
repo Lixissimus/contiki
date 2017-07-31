@@ -513,8 +513,10 @@ create(void)
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
   case POTR_FRAME_TYPE_ANYCAST_ODD_1:
     create_anycast_otp(p, 1, NULL);
+#if DEBUG
     rtimer_clock_t planned_start = secrdc_get_next_strobe_start();
     PRINTF("wakeup counter at %u: %u (%u)\n", planned_start, secrdc_get_wake_up_counter(planned_start).u32, type);
+#endif /* DEBUG */
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
   default:
