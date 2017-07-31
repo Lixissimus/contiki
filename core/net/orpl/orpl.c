@@ -169,17 +169,12 @@ udp_received_routing_set(struct simple_udp_connection *c,
 
   /* Todo: check if the sender is a reachable neighbor, see original orpl code */
 
-  PRINT6ADDR(sender_addr->u8);
-  PRINTF("\n");
-
-  int bit_count_before = orpl_routing_set_count_bits();
-  int bit_count_after;
 
   /* Todo: include w */
   if(orpl_current_edc() < neighbor_edc) {
+    int bit_count_before = orpl_routing_set_count_bits();
+    int bit_count_after;
     /* Insert the neighbor in our routing set */
-    /* Currently id is last 2 byte of ip address */
-    // uint16_t neighbor_id = (sender_addr->u8[14] << 8) + sender_addr->u8[15];
     orpl_routing_set_insert(sender_addr);
     PRINTF("ORPL: inserting neighbor into routing set:");
     PRINT6ADDR(sender_addr);
@@ -191,12 +186,14 @@ udp_received_routing_set(struct simple_udp_connection *c,
     PRINTF("ORPL: merging routing set from:");
     PRINT6ADDR(sender_addr);
     PRINTF("\n");
-  }
+    
+    /* Broadcast our routing set again if it has changed */
+    bit_count_after = orpl_routing_set_count_bits();
+    if(curr_instance && bit_count_after != bit_count_before) {
+      request_routing_set_broadcast();
+    }
 
-  /* Broadcast our routing set again if it has changed */
-  bit_count_after = orpl_routing_set_count_bits();
-  if(curr_instance && bit_count_after != bit_count_before) {
-    request_routing_set_broadcast();
+    orpl_routing_set_print();
   }
 }
 
@@ -267,8 +264,14 @@ orpl_update_edc(rpl_rank_t edc)
 void
 orpl_trickle_callback(rpl_instance_t *instance)
 {
+  curr_instance = instance;
+
+  /* Todo: implement aging by swapping routing sets, see original orpl code */
+
   /* broadcast our routing set */
   request_routing_set_broadcast();
+
+  rpl_recalculate_ranks();
 }
 
 void

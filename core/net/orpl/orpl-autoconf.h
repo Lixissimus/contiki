@@ -66,7 +66,7 @@
 
 /* define size of routing set */
 #undef ORPL_CONF_ROUTING_SET_M
-#define ORPL_CONF_ROUTING_SET_M 128
+#define ORPL_CONF_ROUTING_SET_M 32
 
 /* enable ORPL */
 #undef ORPL_ENABLED

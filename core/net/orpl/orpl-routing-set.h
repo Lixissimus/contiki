@@ -100,6 +100,8 @@ void orpl_routing_set_swap();
 /* Returns the number of bits set in the active routing set */
 int orpl_routing_set_count_bits();
 
+void orpl_routing_set_print();
+
 #endif /* __orpl_routing_set_H__ */
 
 /*

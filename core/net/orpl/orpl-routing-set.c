@@ -46,6 +46,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include <stdio.h>
+
 
 /* We maintain two routing sets, one "active" and one "warmup" to implement ageing. */
 static struct routing_set_s routing_sets[2];
@@ -193,4 +195,18 @@ orpl_routing_set_count_bits()
       }
     }
   return cnt;
+}
+
+void
+orpl_routing_set_print()
+{
+  int i;
+  for(i=0; i<ROUTING_SET_M; i++) {
+    if(rs_get_bit(orpl_routing_set_get_active(), i)) {
+      printf("1");
+    } else {
+      printf("0");
+    }
+  }
+  printf("\n");
 }
