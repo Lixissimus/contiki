@@ -296,11 +296,11 @@ length(void)
   if(packetbuf_holds_broadcast()) {
     return potr_length_of(POTR_FRAME_TYPE_BROADCAST_DATA);
   }
-  
+#if POTR_CONF_WITH_ANYCAST
   if(packetbuf_holds_anycast()) {
     return potr_length_of(POTR_FRAME_TYPE_ANYCAST_EVEN_0);
   }
-  
+#endif /* POTR_CONF_WITH_ANYCAST */  
   return potr_length_of(POTR_FRAME_TYPE_UNICAST_DATA);
 }
 /*---------------------------------------------------------------------------*/
@@ -432,9 +432,11 @@ create(void)
   case FRAME802154_DATAFRAME:
     if(packetbuf_holds_broadcast()) {
       type = POTR_FRAME_TYPE_BROADCAST_DATA;
+#if POTR_CONF_WITH_ANYCAST
     } else if(packetbuf_holds_anycast()) {
       type = secrdc_specialize_anycast_frame_type();
       last_anycast_type = type;
+#endif /* POTR_CONF_WITH_ANYCAST */
     } else {
       type = POTR_FRAME_TYPE_UNICAST_DATA;
     }

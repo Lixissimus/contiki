@@ -158,9 +158,11 @@ send(mac_callback_t sent, void *ptr)
       return;
     }
     receiver = NULL;
+#if POTR_CONF_WITH_ANYCAST    
   } else if(packetbuf_holds_anycast()) {
     ADAPTIVESEC_STRATEGY.send(sent, ptr);
     return;
+#endif /* POTR_CONF_WITH_ANYCAST */
   } else {
     entry = akes_nbr_get_receiver_entry();
     if(!entry || !entry->permanent) {

@@ -59,7 +59,16 @@
 #define PRINTF(...)
 #endif /* DEBUG */
 
-#define PRINT6ADDR(addr) PRINTF(" %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x ", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
+#define PRINT6ADDR(addr) PRINTF(                                                \
+    " %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x ",\
+    ((uint8_t *)addr)[0], ((uint8_t *)addr)[1],                                 \
+    ((uint8_t *)addr)[2], ((uint8_t *)addr)[3],                                 \
+    ((uint8_t *)addr)[4], ((uint8_t *)addr)[5],                                 \
+    ((uint8_t *)addr)[6], ((uint8_t *)addr)[7],                                 \
+    ((uint8_t *)addr)[8], ((uint8_t *)addr)[9],                                 \
+    ((uint8_t *)addr)[10], ((uint8_t *)addr)[11],                               \
+    ((uint8_t *)addr)[12], ((uint8_t *)addr)[13],                               \
+    ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
 
 /* UDP port used for routing set broadcasting */
 #define ROUTING_SET_PORT 4444
@@ -73,13 +82,13 @@ static struct ctimer routing_set_broadcast_timer;
  * is a routing set, so that the desired callback function is called
  * after each transmission attempt */
 int sending_routing_set = 0;
-/* Data structure used for routing set broadcasting. Also includes
- * current edc. */
+/* Data structure used for routing set broadcasting. */
+/* Todo: why the padding? */
 struct routing_set_broadcast_s {
   uint16_t edc;
   union {
-  struct routing_set_s rs;
-  uint8_t padding[64];
+    struct routing_set_s rs;
+    uint8_t padding[64];
   };
 };
 
@@ -94,11 +103,9 @@ static uint16_t last_broadcasted_edc = 0xffff;
 /* The current RPL instance */
 static rpl_instance_t *curr_instance;
 
-
-
 /* Decide whether we generally want to receive a
  * packet from that source. This is called from
- * secrdc.c interrupt routine. 
+ * secrdc.c interrupt routine.
  */
 enum orpl_routing_decision
 orpl_should_receive()
@@ -106,15 +113,10 @@ orpl_should_receive()
   uint8_t *p = packetbuf_hdrptr();
   uint8_t type = p[0];
   linkaddr_t addr;
-  // uint16_t src_id;
-  // uint16_t own_id;
   p += 1;
   memcpy(addr.u8, p, LINKADDR_SIZE);
-  // src_id = (addr.u8[LINKADDR_SIZE-2] << 8) + addr.u8[LINKADDR_SIZE-1];
-  // own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
 
   rpl_rank_t src_rank = rpl_get_parent_rank((uip_lladdr_t *) &addr);
-  // printf("orpl: src rank: %u\n", src_rank);
 
   /* check if routing upwards by checking anycast type */
   if(1) {
@@ -132,35 +134,11 @@ orpl_should_receive()
     /* for downwards routing enforce src_rank < orpl_current_edc() */
   }
 
-  /* some hardcoded network setup */
-  /* switch(own_id) {
-  case 0x0001:
-    if(src_id == 0x0002) {
-      PRINTF("keep\n");
-      return ORPL_ROUTE_KEEP;
-    }
-    PRINTF("reject\n");
-    return ORPL_ROUTE_REJECT;
-  case 0x0002:
-    return ORPL_ROUTE_KEEP;
-    PRINTF("keep\n");
-    return ORPL_ROUTE_REJECT;
-  case 0x0003:
-    if(src_id == 0x0002) {
-      PRINTF("keep\n");
-      return ORPL_ROUTE_KEEP;
-    }
-    PRINTF("reject\n");
-    return ORPL_ROUTE_REJECT;
-  default:
-    PRINTF("I am an unspecified node! :(\n");
-  } */
-
   return ORPL_ROUTE_REJECT;
 }
 
-/* Decide whether to route the packet upwards, 
- * downwards, or keep it (because it's for us) 
+/* Decide whether to route the packet upwards,
+ * downwards, or keep it (because it's for us)
  */
 enum orpl_routing_decision
 orpl_make_routing_decision(uip_ipaddr_t *dest_addr)
@@ -168,10 +146,6 @@ orpl_make_routing_decision(uip_ipaddr_t *dest_addr)
   if(uip_ds6_is_my_addr(dest_addr)) {
     return ORPL_ROUTE_KEEP;
   }
-  
-  // if(uip_is_addr_linklocal_rplnodes_mcast(dest_addr)) {
-  //     return ORPL_ROUTE_KEEP;
-  // }
   /* just routing upwards for now */
   return ORPL_ROUTE_UP;
 }
@@ -188,16 +162,16 @@ udp_received_routing_set(struct simple_udp_connection *c,
 {
   struct routing_set_broadcast_s *data = (struct routing_set_broadcast_s *)payload;
 
-  
   /* EDC: store edc as neighbor attribute, update metric */
   uint16_t neighbor_edc = data->edc;
   rpl_set_parent_rank((uip_lladdr_t *)packetbuf_addr(PACKETBUF_ADDR_SENDER), neighbor_edc);
   rpl_recalculate_ranks();
 
   /* Todo: check if the sender is a reachable neighbor, see original orpl code */
-  
+
   PRINT6ADDR(sender_addr->u8);
-  
+  PRINTF("\n");
+
   int bit_count_before = orpl_routing_set_count_bits();
   int bit_count_after;
 
@@ -209,7 +183,7 @@ udp_received_routing_set(struct simple_udp_connection *c,
     orpl_routing_set_insert(neighbor_id);
     PRINTF("ORPL: inserting neighbor into routing set: %u\n", neighbor_id);
 
-    /* The neighbor is a child, merge its routing set into ours */
+    /* The neighbor is a child, merge its routing set into ours */ \
     orpl_routing_set_merge((const struct routing_set_s *)
       &((struct routing_set_broadcast_s*)data)->rs);
     PRINTF("ORPL: merging routing set from: %u\n", neighbor_id);
@@ -235,7 +209,7 @@ static void
 broadcast_routing_set(void *ptr)
 {
   /* Todo: check if routing sets are active */
-  
+
   struct routing_set_broadcast_s routing_set_broadcast;
   rpl_rank_t curr_edc = orpl_current_edc();
 
@@ -284,9 +258,6 @@ orpl_update_edc(rpl_rank_t edc)
   if(edc != curr_edc) {
     PRINTF("#A edc=%u.%u\n", edc/EDC_DIVISOR, (10 * (edc % EDC_DIVISOR)) / EDC_DIVISOR);
   }
-
-  /* Update EDC */
-  curr_edc = edc;
 }
 
 void
@@ -298,7 +269,7 @@ orpl_trickle_callback(rpl_instance_t *instance)
 
 void
 orpl_init(uint8_t is_root)
-{    
+{
   /* Init RPL module */
   rpl_init();
 

@@ -1059,10 +1059,12 @@ PROCESS_THREAD(post_processing, ev, data)
           while(!rtimer_is_schedulable(u.strobe.strobe_start, ILOCS_MIN_TIME_TO_STROBE + 1)) {
             u.strobe.strobe_start += 2 * WAKEUP_INTERVAL;
           }
+#if POTR_CONF_WITH_ANYCAST
         } else if(u.strobe.is_anycast) {
           u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
+#endif /* POTR_CONF_WITH_ANYCAST */
         } else if(potr_is_helloack()) {
           ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
           u.strobe.is_helloack = 1;
