@@ -116,4 +116,8 @@
 /* configure routing */
 #include "net/orpl/orpl-autoconf.h"
 
+/* set upwards routing only */
+#undef ORPL_CONF_DOWNWARD_ROUTES
+#define ORPL_CONF_DOWNWARD_ROUTES 0
+
 #endif /* PROJECT_ANYCAST_CONF_H_ */

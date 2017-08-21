@@ -70,6 +70,7 @@
     ((uint8_t *)addr)[12], ((uint8_t *)addr)[13],                               \
     ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
 
+#if ORPL_CONF_DOWNWARDS_ROUTES
 /* UDP port used for routing set broadcasting */
 #define ROUTING_SET_PORT 4444
 /* UDP connection used for routing set broadcasting */
@@ -94,6 +95,7 @@ struct routing_set_broadcast_s {
 
 static void broadcast_routing_set(void *ptr);
 static void request_routing_set_broadcast();
+#endif /* ORPL_CONF_DOWNWARDS_ROUTES */
 
 /* Rank changes of more than RANK_MAX_CHANGE trigger a trickle timer reset */
 #define RANK_MAX_CHANGE (2*EDC_DIVISOR)
@@ -128,11 +130,14 @@ orpl_should_receive()
       // PRINTF("ORPL: reject packet routing upwards\n");
       return ORPL_ROUTE_REJECT;
     }
-  } else {
+  }
+  #if ORPL_CONF_DOWNWARDS_ROUTES
+  else {
     PRINTF("ORPL: downwards routing not implemented yet\n");
     return ORPL_ROUTE_REJECT;
     /* for downwards routing enforce src_rank < orpl_current_edc() */
   }
+  #endif /* ORPL_CONF_DOWNWARDS_ROUTES */
 
   return ORPL_ROUTE_REJECT;
 }
@@ -150,6 +155,7 @@ orpl_make_routing_decision(uip_ipaddr_t *dest_addr)
   return ORPL_ROUTE_UP;
 }
 
+#if ORPL_CONF_DOWNWARDS_ROUTES
 /* UDP callback function for received routing sets */
 static void
 udp_received_routing_set(struct simple_udp_connection *c,
@@ -226,6 +232,7 @@ broadcast_routing_set(void *ptr)
   simple_udp_sendto(&routing_set_connection, &routing_set_broadcast, sizeof(struct routing_set_broadcast_s), &routing_set_addr);
   sending_routing_set = 0;
 }
+#endif /* ORPL_CONF_DOWNWARDS_ROUTES */
 
 rpl_rank_t
 orpl_current_edc()
@@ -267,9 +274,10 @@ orpl_trickle_callback(rpl_instance_t *instance)
   curr_instance = instance;
 
   /* Todo: implement aging by swapping routing sets, see original orpl code */
-
+#if ORPL_CONF_DOWNWARDS_ROUTES
   /* broadcast our routing set */
   request_routing_set_broadcast();
+#endif /* ORPL_CONF_DOWNWARDS_ROUTES */
 
   rpl_recalculate_ranks();
 }
@@ -285,12 +293,14 @@ orpl_init(uint8_t is_root)
     orpl_update_edc(0);
   }
 
+#if ORPL_CONF_DOWNWARDS_ROUTES
   /* Init the routing set */
   orpl_routing_set_init();
 
-  /* Set up multicast UDP connectoin for dissemination of routing sets */
+  /* Set up multicast UDP connection for dissemination of routing sets */
   uip_create_linklocal_allnodes_mcast(&routing_set_addr);
   simple_udp_register(&routing_set_connection, ROUTING_SET_PORT,
       NULL, ROUTING_SET_PORT,
       udp_received_routing_set);
+#endif /* ORPL_CONF_DOWNWARDS_ROUTES */
 }

@@ -42,24 +42,51 @@
 #include "dev/button-sensor.h"
 #include "dev/leds.h"
 
+#include "net/linkaddr.h"
 #include "net/ip/simple-udp.h"
 #include "net/ip/uip.h"
-#include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
-#include "net/linkaddr.h"
+#include "net/ipv6/uip-ds6.h"
 #include "net/orpl/orpl.h"
+#include "net/llsec/adaptivesec/akes-nbr.h"
 
 #include "lib/random.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 #define SERVICE_ID 112
 #define UDP_PORT 1234
-#define NETWORK_SIZE 2
+#define NETWORK_SIZE 8
 #define ROOT_ID 1
 
+#define DEBUG 1
+#define PERIODIC_SEND 1
+
 static struct ctimer off_timer;
+
+#if PERIODIC_SEND
+#define SEND_INTERVAL 5*CLOCK_SECOND
+static struct etimer periodic_timer;
+static struct etimer delay_timer;
+#endif
+
+#if DEBUG
+static struct ctimer nbr_timer;
+#endif
+
+/* experiment setup */
+#define STARTUP_DELAY 5*CLOCK_SECOND
+#define EXP_RUNTIME 60*CLOCK_SECOND
+#define SHUTDOWN_DELAY 5*CLOCK_SECOND
+
+#define MEASURE_DELIVERY_RATIO 1
+#if MEASURE_DELIVERY_RATIO
+static uint32_t packets_received[NETWORK_SIZE];
+// static uint32_t packets_expected = EXP_RUNTIME / SEND_INTERVAL;
+static uint32_t packets_expected = 60/5;
+#endif
 
 static uint16_t ip_prefix[] = { UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, 0 };
 
@@ -77,10 +104,13 @@ static uint16_t ip_prefix[] = { UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 
 PROCESS(anycast_process, "Anycast process");
 AUTOSTART_PROCESSES(&anycast_process);
 
+static int receiver_indcator_on;
+
 static void
 leds_turn_off(void *d)
 {
   leds_off(LEDS_ALL);
+  receiver_indcator_on = 0;
 }
 
 static void
@@ -92,8 +122,13 @@ receiver(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  printf("Data received on port %d from port %d with length %d: %s\n",
-         receiver_port, sender_port, datalen, data);
+  uint16_t sender_id;
+  sender_id = (sender_addr->u8[14] << 8) + sender_addr->u8[15];
+  printf("Data received on port %d from port %d from %" PRIu16 " with length %d: %s\n",
+         receiver_port, sender_port, sender_id, datalen, data);
+  
+  packets_received[sender_id-1]++;
+  receiver_indcator_on = 1;
   leds_on(LEDS_ALL);
   if(!ctimer_expired(&off_timer)) {
     ctimer_restart(&off_timer);
@@ -102,11 +137,30 @@ receiver(struct simple_udp_connection *c,
   }
 }
 
+#if DEBUG
+static void
+check_nbr_status(void *d)
+{
+  if(receiver_indcator_on) {
+    return;
+  }
+
+  if(akes_nbr_count(AKES_NBR_PERMANENT) > 0) {
+    leds_off(LEDS_RED);
+  } else {
+    leds_on(LEDS_RED);
+  }
+
+  ctimer_restart(&nbr_timer);
+}
+#endif
+
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(anycast_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
+  uint8_t i;
   
   PROCESS_BEGIN();
 
@@ -115,21 +169,23 @@ PROCESS_THREAD(anycast_process, ev, data)
     PROCESS_EXIT();
   }
 
+  /* setup addresses */
   static uint16_t own_id;
   uip_ipaddr_t ipaddr;
   own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
   ip_from_id(&ipaddr, own_id);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
-    
 
+#if !PERIODIC_SEND
   SENSORS_ACTIVATE(button_sensor);
+#endif
 
+  /* setup routing */
   if(own_id == ROOT_ID) {
     rpl_dag_t *dag = rpl_set_root(RPL_DEFAULT_INSTANCE, &ipaddr);
     rpl_set_prefix(dag, &ipaddr, 64);
-    // NETSTACK_RDC.off(1);
   }
-  
+
   /* init the ORPL module */
   orpl_init(own_id == ROOT_ID);
 
@@ -138,40 +194,80 @@ PROCESS_THREAD(anycast_process, ev, data)
                       NULL, UDP_PORT,
                       receiver);
 
-  printf("Hello from %d\n", own_id);
+  receiver_indcator_on = 0;
+
+  /* init measurements */
+  for(i = 0; i < NETWORK_SIZE; ++i) {
+    packets_received[i] = 0;
+  }
+
+#if DEBUG
+  ctimer_set(&nbr_timer, CLOCK_SECOND, check_nbr_status, NULL);
+#endif
+
+#if PERIODIC_SEND
+  etimer_set(&delay_timer, STARTUP_DELAY);
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&delay_timer));
+  etimer_set(&periodic_timer, SEND_INTERVAL);
+#endif
+
+  static uint8_t msg_idx = 0;
 
   while(1) {
+#if PERIODIC_SEND
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+    etimer_reset(&periodic_timer);
+    msg_idx++;
+#if MEASURE_DELIVERY_RATIO
+    if(msg_idx > packets_expected) {
+      break;
+    }
+#endif
+    if(own_id == ROOT_ID) {
+      continue;
+    }
+#else
     PROCESS_WAIT_EVENT();
-    if(ev == sensors_event && data == &button_sensor) {
-      /* Send a message */
-      if(button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL) {
-        static uint8_t msg_idx;
-        char buf[127];
-        uip_ipaddr_t addr;
-        uint16_t dest_id;
+    if( ev == sensors_event &&
+        data == &button_sensor &&
+        button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL)
+#endif /* PERIODIC_SEND */
+    {
+      char buf[127];
+      uip_ipaddr_t addr;
+      uint16_t dest_id;
 
-        if(orpl_current_edc() == 0xffff) {
-          printf("Node is not in DODAG\n");
-          // continue;
-        } else {
-          printf("current edc: %d\n", orpl_current_edc());
-        }
-
-        // do {
-        //   dest_id = random_rand() % NETWORK_SIZE + 1;
-        // } while(dest_id == own_id);
-
-        /* Only traffic to root */
-        dest_id = ROOT_ID;
-
-        ip_from_id(&addr, dest_id);
-        printf("Sending anycast from %d to %d: %d\n", own_id, dest_id, msg_idx);
-        sprintf(buf, "Message %d", msg_idx);
-        simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
-        msg_idx += 1;
+      if(orpl_current_edc() == 0xffff) {
+        printf("Node is not in DODAG\n");
+        // continue;
+      } else {
+        printf("current edc: %d\n", orpl_current_edc());
       }
+
+      // do {
+      //   dest_id = random_rand() % NETWORK_SIZE + 1;
+      // } while(dest_id == own_id);
+
+      /* Only traffic to root */
+      dest_id = ROOT_ID;
+
+      ip_from_id(&addr, dest_id);
+      printf("Sending anycast from %d to %d: %d/%" PRIu32 "\n", own_id, dest_id, msg_idx, packets_expected);
+      sprintf(buf, "Message %d", msg_idx);
+      simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
     }
   }
+#if PERIODIC_SEND
+  etimer_set(&delay_timer, SHUTDOWN_DELAY);
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&delay_timer));
+#endif
+
+#if MEASURE_DELIVERY_RATIO
+  printf("delivery ratios:\n");
+  for(i = 0; i < NETWORK_SIZE; ++i) {
+    printf("Node %" PRIu8 ": %" PRIu32 "/%" PRIu32 "\n", i+1, packets_received[i], packets_expected);
+  }
+#endif
   
   PROCESS_END();
 }
