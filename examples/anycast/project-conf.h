@@ -111,6 +111,7 @@
 /* set low transmission power for multihop network simulation */
 #undef CC2538_RF_CONF_TX_POWER
 #define CC2538_RF_CONF_TX_POWER 0x00
+// #define CC2538_RF_CONF_TX_POWER 0x42
 
 /* configure routing */
 #include "net/orpl/orpl-autoconf.h"

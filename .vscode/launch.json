@@ -3,7 +3,16 @@
     "compounds": [
         {
             "name": "All",
-            "configurations": ["Login-0", "Login-1"]
+            "configurations": [
+                "Login-1",
+                "Login-2",
+                "Login-3",
+                "Login-4",
+                "Login-5",
+                "Login-6",
+                "Login-7",
+                "Login-0"
+            ]
         }
     ],
     "configurations": [
@@ -15,7 +24,6 @@
             "args":["-b115200", "/dev/ttyUSB0"],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            // "preLaunchTask": "upload-0",
             "externalConsole": true
         },
         {
@@ -26,7 +34,6 @@
             "args":["-b115200", "/dev/ttyUSB1"],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            // "preLaunchTask": "upload-1",
             "externalConsole": true
         },
         {
@@ -37,7 +44,6 @@
             "args":["-b115200", "/dev/ttyUSB2"],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            // "preLaunchTask": "upload-2",
             "externalConsole": true
         },
         {
@@ -48,7 +54,6 @@
             "args":["-b115200", "/dev/ttyUSB3"],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            // "preLaunchTask": "upload-3",
             "externalConsole": true
         },
         {
@@ -59,7 +64,46 @@
             "args":["-b115200", "/dev/ttyUSB4"],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            // "preLaunchTask": "upload-4",
+            "externalConsole": true
+        },
+        {
+            "name": "Login-5",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/tools/sky/serialdump-linux",
+            "args":["-b115200", "/dev/ttyUSB5"],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            "externalConsole": true
+        },
+        {
+            "name": "Login-6",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/tools/sky/serialdump-linux",
+            "args":["-b115200", "/dev/ttyUSB6"],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            "externalConsole": true
+        },
+        {
+            "name": "Login-7",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/tools/sky/serialdump-linux",
+            "args":["-b115200", "/dev/ttyUSB7"],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            "externalConsole": true
+        },
+        {
+            "name": "Login-8",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/tools/sky/serialdump-linux",
+            "args":["-b115200", "/dev/ttyUSB8"],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
             "externalConsole": true
         },
         {

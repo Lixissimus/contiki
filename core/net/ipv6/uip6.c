@@ -100,7 +100,7 @@
 /* For Debug, logging, statistics                                            */
 /*---------------------------------------------------------------------------*/
 
-#define DEBUG DEBUG_NONE
+#define DEBUG 0
 #include "net/ip/uip-debug.h"
 
 #if UIP_LOGGING == 1
@@ -1224,6 +1224,7 @@ uip_process(uint8_t flag)
 #if ORPL_ENABLED
   /* We don't handle multicasts with ORPL */
   if(!uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr)) {
+    uint16_t dst_id;
     switch(orpl_make_routing_decision(&UIP_IP_BUF->destipaddr)) {
     case ORPL_ROUTE_KEEP:
       /* This packet is for us, deliver up the stack */
@@ -1231,7 +1232,8 @@ uip_process(uint8_t flag)
       goto process;
     case ORPL_ROUTE_UP:
       /* Not for us, continue routing */
-      printf("route packet\n");
+      dst_id = (UIP_IP_BUF->destipaddr.u8[14] << 8) + UIP_IP_BUF->destipaddr.u8[15];
+      printf("route packet towards %d\n", dst_id);
       goto send;
       break;
     case ORPL_ROUTE_DOWN:
