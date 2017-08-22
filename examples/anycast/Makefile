@@ -7,8 +7,7 @@ CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 MODULES += core/net/llsec/adaptivesec
 MODULES += core/net/orpl
 MODULES += apps/servreg-hack
-
-CONTIKI_SOURCEFILES += lladdr-id-mapping.c
+MODULES += examples/anycast/deployment
 
 CONTIKI = ../..
 CONTIKI_WITH_IPV6 = 1

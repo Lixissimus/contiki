@@ -52,7 +52,7 @@
 
 #include "lib/random.h"
 
-#include "lladdr-id-mapping.h"
+#include "deployment/lladdr-id-mapping.h"
 
 #include <stdio.h>
 #include <string.h>
