@@ -64,7 +64,7 @@
 #define ROOT_ID 1
 
 #define DEBUG 1
-#define PERIODIC_SEND 0
+#define PERIODIC_SEND 1
 
 static struct ctimer off_timer;
 
@@ -80,14 +80,14 @@ static struct ctimer nbr_timer;
 
 /* experiment setup */
 #define STARTUP_DELAY 5*CLOCK_SECOND
-#define EXP_RUNTIME 60*CLOCK_SECOND
+#define EXP_RUNTIME 60*60*CLOCK_SECOND
 #define SHUTDOWN_DELAY 5*CLOCK_SECOND
 
 #define MEASURE_DELIVERY_RATIO 1
 #if MEASURE_DELIVERY_RATIO
 static uint32_t packets_received[NETWORK_SIZE];
 // static uint32_t packets_expected = EXP_RUNTIME / SEND_INTERVAL;
-static uint32_t packets_expected = 60/5;
+static uint32_t packets_expected = (EXP_RUNTIME) / (SEND_INTERVAL);
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -98,14 +98,10 @@ static int receiver_indcator_on;
 
 /*---------------------------------------------------------------------------*/
 static void
-set_global_address(uip_ipaddr_t *ipaddr)
+print_own_addresses(void)
 {
   int i;
   uint8_t state;
-
-  uip_ip6addr(ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
-  uip_ds6_set_addr_iid(ipaddr, &uip_lladdr);
-  uip_ds6_addr_add(ipaddr, 0, ADDR_AUTOCONF);
 
   printf("IPv6 addresses:\n");
   for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
@@ -183,12 +179,14 @@ PROCESS_THREAD(anycast_process, ev, data)
   }
 
   /* setup addresses */
-  uip_ipaddr_t ipaddr;
-  set_global_address(&ipaddr);
-  
   static uint16_t own_id;
   own_id = lladdr_id_mapping_id_from_ll(&linkaddr_node_addr);
   printf("Own id: %" PRIu16 "\n", own_id);
+  
+  uip_ipaddr_t ipaddr;
+  lladdr_id_mapping_ipv6_from_id(own_id, &ipaddr);
+  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
+  print_own_addresses();
 
 #if !PERIODIC_SEND
   SENSORS_ACTIVATE(button_sensor);
@@ -225,19 +223,19 @@ PROCESS_THREAD(anycast_process, ev, data)
   etimer_set(&periodic_timer, SEND_INTERVAL);
 #endif
 
-  static uint8_t msg_idx = 0;
+  static uint32_t msg_idx = 0;
 
   while(1) {
 #if PERIODIC_SEND
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_reset(&periodic_timer);
-    msg_idx++;
 #if MEASURE_DELIVERY_RATIO
-    if(msg_idx > packets_expected) {
+    if(msg_idx >= packets_expected) {
       break;
     }
 #endif
     if(own_id == ROOT_ID) {
+      msg_idx++;
       continue;
     }
 #else
@@ -247,6 +245,7 @@ PROCESS_THREAD(anycast_process, ev, data)
         button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL)
 #endif /* PERIODIC_SEND */
     {
+      msg_idx++;
       char buf[127];
       uip_ipaddr_t addr;
       uint16_t dest_id;
@@ -267,10 +266,10 @@ PROCESS_THREAD(anycast_process, ev, data)
 
       // ip_from_id(&addr, dest_id);
       lladdr_id_mapping_ipv6_from_id(dest_id, &addr);
-      printf("Sending anycast from %d to %d: %d/%" PRIu32 "\n", own_id, dest_id, msg_idx, packets_expected);
+      printf("Sending anycast from %d to %d: %" PRIu32 "/%" PRIu32 "\n", own_id, dest_id, msg_idx, packets_expected);
       uip_debug_ipaddr_print(&addr);
       printf("\n");
-      sprintf(buf, "Message %d", msg_idx);
+      sprintf(buf, "Message %" PRIu32, msg_idx);
       simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
     }
   }

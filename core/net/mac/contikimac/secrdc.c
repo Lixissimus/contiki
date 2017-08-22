@@ -1061,8 +1061,8 @@ PROCESS_THREAD(post_processing, ev, data)
           }
 #if POTR_CONF_WITH_ANYCAST
         } else if(u.strobe.is_anycast) {
-          // u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
-          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE;
+          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
+          // u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE;
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
 #endif /* POTR_CONF_WITH_ANYCAST */

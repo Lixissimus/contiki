@@ -65,12 +65,12 @@ static const struct id_linkaddr id_linkaddr_list[] = {
 #else
   /* home */
   { 1, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0xd9}} },
-  { 2, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0x32}} }
+  { 2, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0x66}} }
 #endif
 };
 
 static const uint16_t ip_prefix[] = { 0xfe80, 0, 0, 0, 0x212, 0x4b00, 0x430, 0 };
-
+/*---------------------------------------------------------------------------*/
 uint16_t
 lladdr_id_mapping_id_from_ll(const linkaddr_t *addr)
 {
@@ -82,7 +82,7 @@ lladdr_id_mapping_id_from_ll(const linkaddr_t *addr)
   }
   return 0xffff;
 }
-
+/*---------------------------------------------------------------------------*/
 int
 lladdr_id_mapping_ll_from_id(const uint16_t id, linkaddr_t *addr)
 {
@@ -96,7 +96,7 @@ lladdr_id_mapping_ll_from_id(const uint16_t id, linkaddr_t *addr)
 
   return 0;
 }
-
+/*---------------------------------------------------------------------------*/
 uint16_t
 lladdr_id_mapping_id_from_ipv6(const uip_ipaddr_t *ip_addr)
 {
@@ -110,26 +110,29 @@ lladdr_id_mapping_id_from_ipv6(const uip_ipaddr_t *ip_addr)
   }
   return 0xffff;
 }
-
+/*---------------------------------------------------------------------------*/
 int
-lladdr_id_mapping_ipv6_from_id(const uint16_t id, uip_ipaddr_t *ip_addr)
+lladdr_id_mapping_ipv6_from_id(const uint16_t id, uip_ipaddr_t *ipaddr)
 {
   uint16_t i;
   for(i = 0; i < (sizeof(id_linkaddr_list) / sizeof(struct id_linkaddr)); ++i) {
     if(id_linkaddr_list[i].id == id) {
-      uip_ip6addr(ip_addr,
-          ip_prefix[0],
-          ip_prefix[1],
-          ip_prefix[2],
-          ip_prefix[3],
-          ip_prefix[4],
-          ip_prefix[5],
-          ip_prefix[6],
-          (id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-2] << 8) + id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-1]
-      );
+      uip_ip6addr(ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
+      uip_ds6_set_addr_iid(ipaddr, &uip_lladdr);
+      uip_ds6_set_addr_iid(ipaddr, (uip_lladdr_t*) &id_linkaddr_list[i].addr);
+      // uip_ds6_addr_add(ipaddr, 0, ADDR_AUTOCONF);
+      // uip_ip6addr(ip_addr,
+      //     ip_prefix[0],
+      //     ip_prefix[1],
+      //     ip_prefix[2],
+      //     ip_prefix[3],
+      //     ip_prefix[4],
+      //     ip_prefix[5],
+      //     ip_prefix[6],
+      //     (id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-2] << 8) + id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-1]
+      // );
       return 1;
     }
   }
-
   return 0;
 }
