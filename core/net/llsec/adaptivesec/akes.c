@@ -286,7 +286,7 @@ akes_is_acceptable_hello(struct akes_nbr_entry *entry)
 {
   akes_nbr_delete_expired_tentatives();
   return (akes_nbr_count(AKES_NBR_TENTATIVE) < AKES_NBR_MAX_TENTATIVES)
-      && !leaky_bucket_is_full(&hello_bucket)
+      && !leaky_bucket_is_full(&helloack_bucket)
       && !(entry && entry->tentative)
       && akes_nbr_free_slots();
 }
