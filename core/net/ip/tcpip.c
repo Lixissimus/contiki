@@ -579,7 +579,8 @@ tcpip_ipv6_output(void)
     /* We first check if the destination address is on our immediate
        link. If so, we simply use the destination address as our
        nexthop address. */
-    if(nexthop == NULL && uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr) && 0){
+    // if(nexthop == NULL && uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr) && 0){
+    if(nexthop == NULL && uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr)){
       nexthop = &UIP_IP_BUF->destipaddr;
     }
 #if ORPL_ENABLED
