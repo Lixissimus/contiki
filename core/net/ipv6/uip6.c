@@ -1224,7 +1224,6 @@ uip_process(uint8_t flag)
 #if ORPL_ENABLED
   /* We don't handle multicasts with ORPL */
   if(!uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr)) {
-    uint16_t dst_id;
     switch(orpl_make_routing_decision(&UIP_IP_BUF->destipaddr)) {
     case ORPL_ROUTE_KEEP:
       /* This packet is for us, deliver up the stack */
@@ -1232,10 +1231,7 @@ uip_process(uint8_t flag)
       goto process;
     case ORPL_ROUTE_UP:
       /* Not for us, continue routing */
-      /* Todo: fix finding id! */
-      // dst_id = (UIP_IP_BUF->destipaddr.u8[14] << 8) + UIP_IP_BUF->destipaddr.u8[15];
-      // dst_id = lladdr_id_mapping_id_from_ipv6(&UIP_IP_BUF->destipaddr)
-      // printf("route packet towards %d\n", dst_id);
+      printf("route packet\n");
       goto send;
       break;
     case ORPL_ROUTE_DOWN:

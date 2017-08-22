@@ -90,30 +90,24 @@ static uint32_t packets_received[NETWORK_SIZE];
 static uint32_t packets_expected = 60/5;
 #endif
 
-static uint16_t ip_prefix[] = { UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0x212, 0x4b00, 0x430, 0 };
-
-#define ip_from_id(dest, id) uip_ip6addr(dest,  \
-    ip_prefix[0],                               \
-    ip_prefix[1],                               \
-    ip_prefix[2],                               \
-    ip_prefix[3],                               \
-    ip_prefix[4],                               \
-    ip_prefix[5],                               \
-    ip_prefix[6],                               \
-    id)
-
 /*---------------------------------------------------------------------------*/
 PROCESS(anycast_process, "Anycast process");
 AUTOSTART_PROCESSES(&anycast_process);
 
 static int receiver_indcator_on;
 
+/*---------------------------------------------------------------------------*/
 static void
-print_local_addresses(void) {
+set_global_address(uip_ipaddr_t *ipaddr)
+{
   int i;
   uint8_t state;
 
-  printf("Own IPv6 addresses:\n");
+  uip_ip6addr(ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
+  uip_ds6_set_addr_iid(ipaddr, &uip_lladdr);
+  uip_ds6_addr_add(ipaddr, 0, ADDR_AUTOCONF);
+
+  printf("IPv6 addresses:\n");
   for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
     state = uip_ds6_if.addr_list[i].state;
     if(uip_ds6_if.addr_list[i].isused &&
@@ -124,14 +118,14 @@ print_local_addresses(void) {
     }
   }
 }
-
+/*---------------------------------------------------------------------------*/
 static void
 leds_turn_off(void *d)
 {
   leds_off(LEDS_ALL);
   receiver_indcator_on = 0;
 }
-
+/*---------------------------------------------------------------------------*/
 static void
 receiver(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -142,7 +136,6 @@ receiver(struct simple_udp_connection *c,
          uint16_t datalen)
 {
   uint16_t sender_id;
-  // sender_id = (sender_addr->u8[14] << 8) + sender_addr->u8[15];
   sender_id = lladdr_id_mapping_id_from_ipv6(sender_addr);
   printf("Data received on port %d from port %d from %" PRIu16 " with length %d: %s\n",
          receiver_port, sender_port, sender_id, datalen, data);
@@ -156,7 +149,7 @@ receiver(struct simple_udp_connection *c,
     ctimer_set(&off_timer, CLOCK_SECOND / 2, leds_turn_off, NULL);
   }
 }
-
+/*---------------------------------------------------------------------------*/
 #if DEBUG
 static void
 check_nbr_status(void *d)
@@ -190,16 +183,12 @@ PROCESS_THREAD(anycast_process, ev, data)
   }
 
   /* setup addresses */
-  static uint16_t own_id;
   uip_ipaddr_t ipaddr;
-  // own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
-  // ip_from_id(&ipaddr, own_id);
-  // uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
-
+  set_global_address(&ipaddr);
+  
+  static uint16_t own_id;
   own_id = lladdr_id_mapping_id_from_ll(&linkaddr_node_addr);
   printf("Own id: %" PRIu16 "\n", own_id);
-
-  print_local_addresses();
 
 #if !PERIODIC_SEND
   SENSORS_ACTIVATE(button_sensor);

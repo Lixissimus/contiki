@@ -467,6 +467,9 @@ create(void)
   /* Todo: write Macro to test for all anycast types */
   if (type < POTR_FRAME_TYPE_ANYCAST_EVEN_0) {
     entry = akes_nbr_get_receiver_entry();
+  } else {
+    /* Make sure entry is initialized */
+    entry = NULL;
   }
   p[0] = type;
   p += 1;
