@@ -135,6 +135,7 @@ send_broadcast(mac_callback_t sent, void *ptr)
 #endif /* CONTIKIMAC_FRAMER_ENABLED */
 
   qb = queuebuf_new_from_packetbuf();
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &linkaddr_node_addr);
   if(!qb || (NETSTACK_FRAMER.create() < 0)) {
     PRINTF("coresec-strategy: Did not send broadcast\n");
     if(qb) {

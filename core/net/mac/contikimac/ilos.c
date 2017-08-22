@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Hasso-Plattner-Institut.
+ * Copyright (c) 2016, Hasso-Plattner-Institut.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,40 +32,35 @@
 
 /**
  * \file
- *         Leaky bucket implementation.
+ *         Intra-Layer Optimization for 802.15.4 Security (ILOS)
  * \author
  *         Konrad Krentz <konrad.krentz@gmail.com>
  */
 
-#ifndef LEAKY_BUCKET_H_
-#define LEAKY_BUCKET_H_
+#include "net/mac/contikimac/ilos.h"
+#include "net/llsec/llsec802154.h"
+#include "net/packetbuf.h"
+#include "net/llsec/adaptivesec/akes-nbr.h"
 
-#include "contiki.h"
+#if ILOS_ENABLED
+uint8_t ilos_my_broadcast_seqno;
 
-struct leaky_bucket {
-  uint16_t capacity;
-  uint16_t leakage_duration;
-  uint16_t filling_level;
-  unsigned long last_update_timestamp;
-};
+/*---------------------------------------------------------------------------*/
+ilos_wake_up_counter_t
+ilos_parse_wake_up_counter(uint8_t *src)
+{
+  ilos_wake_up_counter_t counter;
 
-/**
- * \param lb pointer to the bucket in question
- * \param capacity number of drops that fit into the bucket
- * \param leakage_duration how long it takes until one drop leaks in seconds
- */
-void leaky_bucket_init(struct leaky_bucket *lb,
-    uint16_t capacity,
-    uint16_t leakage_duration);
-
-/**
- * \brief pours a drop in the bucket
- */
-void leaky_bucket_pour(struct leaky_bucket *lb);
-
-/**
- * \return whether the bucket is full
- */
-int leaky_bucket_is_full(struct leaky_bucket *lb);
-
-#endif /* LEAKY_BUCKET_H_ */
+  memcpy(counter.u8, src, 4);
+  counter.u32 = LLSEC802154_HTONL(counter.u32);
+  return counter;
+}
+/*---------------------------------------------------------------------------*/
+void
+ilos_write_wake_up_counter(uint8_t *dst, ilos_wake_up_counter_t counter)
+{
+  counter.u32 = LLSEC802154_HTONL(counter.u32);
+  memcpy(dst, counter.u8, 4);
+}
+/*---------------------------------------------------------------------------*/
+#endif /* ILOS_ENABLED */

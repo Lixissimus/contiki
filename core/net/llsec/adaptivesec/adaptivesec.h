@@ -47,7 +47,7 @@
 #include "lib/ccm-star.h"
 #include "lib/aes-128.h"
 #include "net/llsec/adaptivesec/potr.h"
-#include "net/mac/contikimac/ilocs.h"
+#include "net/mac/contikimac/ilos.h"
 
 #ifdef ADAPTIVESEC_CONF_UNICAST_SEC_LVL
 #define ADAPTIVESEC_UNICAST_SEC_LVL ADAPTIVESEC_CONF_UNICAST_SEC_LVL
@@ -123,21 +123,21 @@ extern uint8_t adaptivesec_group_key[AES_128_KEY_LENGTH];
 
 uint8_t adaptivesec_get_cmd_id(void);
 uint8_t adaptivesec_get_sec_lvl(void);
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 void adaptivesec_add_security_header(struct akes_nbr *receiver);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 uint8_t *adaptivesec_prepare_command(uint8_t cmd_id, const linkaddr_t *dest);
 void adaptivesec_send_command_frame(void);
 uint8_t adaptivesec_mic_len(void);
 void adaptivesec_aead(uint8_t *key, int shall_encrypt, uint8_t *result, int forward
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     );
 int adaptivesec_verify(uint8_t *key
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     );
 
 #endif /* ADAPTIVESEC_H_ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Hasso-Plattner-Institut.
+ * Copyright (c) 2015, Copyright Robert Olsson / Radio Sensors AB  
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,44 +28,20 @@
  *
  * This file is part of the Contiki operating system.
  *
+ *
+ * Author  : Robert Olsson robert@radio-sensors.com
+ * Created : 2017-04-22
  */
 
 /**
  * \file
- *         Leaky bucket implementation.
- * \author
- *         Konrad Krentz <konrad.krentz@gmail.com>
+ *         Project specific configuration defines for example
+ *
  */
 
-#ifndef LEAKY_BUCKET_H_
-#define LEAKY_BUCKET_H_
+#ifndef PROJECT_CONF_H_
+#define PROJECT_CONF_H_
 
-#include "contiki.h"
+#define AES_128_HW_CONF 1
 
-struct leaky_bucket {
-  uint16_t capacity;
-  uint16_t leakage_duration;
-  uint16_t filling_level;
-  unsigned long last_update_timestamp;
-};
-
-/**
- * \param lb pointer to the bucket in question
- * \param capacity number of drops that fit into the bucket
- * \param leakage_duration how long it takes until one drop leaks in seconds
- */
-void leaky_bucket_init(struct leaky_bucket *lb,
-    uint16_t capacity,
-    uint16_t leakage_duration);
-
-/**
- * \brief pours a drop in the bucket
- */
-void leaky_bucket_pour(struct leaky_bucket *lb);
-
-/**
- * \return whether the bucket is full
- */
-int leaky_bucket_is_full(struct leaky_bucket *lb);
-
-#endif /* LEAKY_BUCKET_H_ */
+#endif /* PROJECT_CONF_H_ */

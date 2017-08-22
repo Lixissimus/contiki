@@ -47,7 +47,7 @@
 
 #include "net/mac/frame802154.h"
 #include "net/llsec/llsec802154.h"
-#include "net/mac/contikimac/ilocs.h"
+#include "net/mac/contikimac/ilos.h"
 
 #ifdef ANTI_REPLAY_CONF_WITH_SUPPRESSION
 #define ANTI_REPLAY_WITH_SUPPRESSION ANTI_REPLAY_CONF_WITH_SUPPRESSION
@@ -120,9 +120,9 @@ void anti_replay_init_info(struct anti_replay_info *sender_info);
 int anti_replay_was_replayed(struct anti_replay_info *sender_info);
 #endif /* LLSEC802154_USES_FRAME_COUNTER */
 
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 int anti_replay_was_replayed(struct secrdc_phase *phase);
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 
 #endif /* ANTI_REPLAY_H */
 

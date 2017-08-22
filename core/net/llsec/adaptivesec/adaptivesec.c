@@ -92,9 +92,9 @@ adaptivesec_get_sec_lvl(void)
     case AKES_ACK_IDENTIFIER:
       return AKES_ACKS_SEC_LVL;
     case AKES_UPDATE_IDENTIFIER:
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
     case AKES_UPDATEACK_IDENTIFIER:
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
       return AKES_UPDATES_SEC_LVL;
     }
     break;
@@ -107,7 +107,7 @@ adaptivesec_get_sec_lvl(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 void
 adaptivesec_add_security_header(struct akes_nbr *receiver)
 {
@@ -118,7 +118,7 @@ adaptivesec_add_security_header(struct akes_nbr *receiver)
   packetbuf_set_attr(PACKETBUF_ATTR_SECURITY_LEVEL, adaptivesec_get_sec_lvl());
 #endif /* !ANTI_REPLAY_WITH_SUPPRESSION */
 }
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 /*---------------------------------------------------------------------------*/
 uint8_t *
 adaptivesec_prepare_command(uint8_t cmd_id, const linkaddr_t *dest)
@@ -149,8 +149,6 @@ send(mac_callback_t sent, void *ptr)
   struct akes_nbr_entry *entry;
   struct akes_nbr *receiver;
 
-  PRINTF("linkaddr size: %d\n", LINKADDR_SIZE);
-
   packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_DATAFRAME);
   if(packetbuf_holds_broadcast()) {
     if(!akes_nbr_count(AKES_NBR_PERMANENT)) {
@@ -175,7 +173,7 @@ send(mac_callback_t sent, void *ptr)
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
   }
 
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   if(receiver) {
     potr_set_seqno(receiver);
   }
@@ -198,7 +196,7 @@ static int
 create(void)
 {
   int result;
-#if POTR_ENABLED && !ILOCS_ENABLED
+#if POTR_ENABLED && !ILOS_ENABLED
   struct akes_nbr_entry *entry;
   struct akes_nbr *nbr;
   int is_helloack;
@@ -207,9 +205,9 @@ create(void)
   uint8_t *dataptr;
   uint8_t offset;
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
-#endif /* POTR_ENABLED && !ILOCS_ENABLED */
+#endif /* POTR_ENABLED && !ILOS_ENABLED */
 
-#if POTR_ENABLED && !ILOCS_ENABLED
+#if POTR_ENABLED && !ILOS_ENABLED
   /* increment frame counter of unicasts in each transmission and retransmission */
   if(!packetbuf_holds_broadcast()) {
     entry = akes_nbr_get_receiver_entry();
@@ -229,7 +227,7 @@ create(void)
     }
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
   }
-#endif /* POTR_ENABLED && !ILOCS_ENABLED */
+#endif /* POTR_ENABLED && !ILOS_ENABLED */
 
   result = DECORATED_FRAMER.create();
   if(result == FRAMER_FAILED) {
@@ -257,9 +255,9 @@ adaptivesec_mic_len(void)
 /*---------------------------------------------------------------------------*/
 void
 adaptivesec_aead(uint8_t *key, int shall_encrypt, uint8_t *result, int forward
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     )
 {
   uint8_t nonce[CCM_STAR_NONCE_LENGTH];
@@ -269,9 +267,9 @@ adaptivesec_aead(uint8_t *key, int shall_encrypt, uint8_t *result, int forward
   uint8_t a_len;
 
   ccm_star_packetbuf_set_nonce(nonce, forward
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       , phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
   );
   a = packetbuf_hdrptr();
   if(shall_encrypt) {
@@ -300,9 +298,9 @@ adaptivesec_aead(uint8_t *key, int shall_encrypt, uint8_t *result, int forward
 /*---------------------------------------------------------------------------*/
 int
 adaptivesec_verify(uint8_t *key
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     )
 {
   int shall_decrypt;
@@ -311,9 +309,9 @@ adaptivesec_verify(uint8_t *key
   shall_decrypt = adaptivesec_get_sec_lvl() & (1 << 2);
   packetbuf_set_datalen(packetbuf_datalen() - adaptivesec_mic_len());
   adaptivesec_aead(key, shall_decrypt, generated_mic, 0
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       , phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
   );
 
   return memcmp(generated_mic,
@@ -325,7 +323,6 @@ static void
 input(void)
 {
   struct akes_nbr_entry *entry;
-  PRINTF("adaptivesec: input called\n");
 
 #if LLSEC802154_USES_AUX_HEADER && POTR_ENABLED
   packetbuf_set_attr(PACKETBUF_ATTR_SECURITY_LEVEL, adaptivesec_get_sec_lvl());
@@ -359,9 +356,9 @@ input(void)
       return;
     }
 #endif /* POTR_ENABLED */
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
     akes_nbr_prolong(entry->permanent);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 
     NETSTACK_NETWORK.input();
     break;

@@ -55,7 +55,6 @@
 #endif
 
 static struct rtimer *next_rtimer;
-static const rtimer_clock_t max_rtimer_bit = 1 << ((sizeof(rtimer_clock_t) * 8) - 1);
 static const rtimer_clock_t max_rtimer_value = -1;
 
 /*---------------------------------------------------------------------------*/

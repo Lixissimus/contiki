@@ -120,17 +120,6 @@ lladdr_id_mapping_ipv6_from_id(const uint16_t id, uip_ipaddr_t *ipaddr)
       uip_ip6addr(ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
       uip_ds6_set_addr_iid(ipaddr, &uip_lladdr);
       uip_ds6_set_addr_iid(ipaddr, (uip_lladdr_t*) &id_linkaddr_list[i].addr);
-      // uip_ds6_addr_add(ipaddr, 0, ADDR_AUTOCONF);
-      // uip_ip6addr(ip_addr,
-      //     ip_prefix[0],
-      //     ip_prefix[1],
-      //     ip_prefix[2],
-      //     ip_prefix[3],
-      //     ip_prefix[4],
-      //     ip_prefix[5],
-      //     ip_prefix[6],
-      //     (id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-2] << 8) + id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-1]
-      // );
       return 1;
     }
   }

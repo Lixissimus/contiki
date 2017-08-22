@@ -50,11 +50,41 @@
 #include "lib/leaky-bucket.h"
 #include <string.h>
 
+#ifdef AKES_CONF_MAX_HELLO_RATE
+#define MAX_HELLO_RATE AKES_CONF_MAX_HELLO_RATE
+#else /* AKES_CONF_MAX_HELLO_RATE */
+#define MAX_HELLO_RATE (5 * 60) /* 1 HELLO per 5min */
+#endif /* AKES_CONF_MAX_HELLO_RATE */
+
+#ifdef AKES_CONF_MAX_CONSECUTIVE_HELLOS
+#define MAX_CONSECUTIVE_HELLOS AKES_CONF_MAX_CONSECUTIVE_HELLOS
+#else /* AKES_CONF_MAX_CONSECUTIVE_HELLOS */
+#define MAX_CONSECUTIVE_HELLOS (10)
+#endif /* AKES_CONF_MAX_CONSECUTIVE_HELLOS */
+
 #ifdef AKES_CONF_MAX_HELLOACK_RATE
 #define MAX_HELLOACK_RATE AKES_CONF_MAX_HELLOACK_RATE
 #else /* AKES_CONF_MAX_HELLOACK_RATE */
-#define MAX_HELLOACK_RATE (60 * CLOCK_SECOND) /* 1 HELOACK per 1min */
+#define MAX_HELLOACK_RATE (150) /* 1 HELOACK per 150s */
 #endif /* AKES_CONF_MAX_HELLOACK_RATE */
+
+#ifdef AKES_CONF_MAX_CONSECUTIVE_HELLOACKS
+#define MAX_CONSECUTIVE_HELLOACKS AKES_CONF_MAX_CONSECUTIVE_HELLOACKS
+#else /* AKES_CONF_MAX_CONSECUTIVE_HELLOACKS */
+#define MAX_CONSECUTIVE_HELLOACKS (20)
+#endif /* AKES_CONF_MAX_CONSECUTIVE_HELLOACKS */
+
+#ifdef AKES_CONF_MAX_ACK_RATE
+#define MAX_ACK_RATE AKES_CONF_MAX_ACK_RATE
+#else /* AKES_CONF_MAX_ACK_RATE */
+#define MAX_ACK_RATE MAX_HELLOACK_RATE
+#endif /* AKES_CONF_MAX_ACK_RATE */
+
+#ifdef AKES_CONF_MAX_CONSECUTIVE_ACKS
+#define MAX_CONSECUTIVE_ACKS AKES_CONF_MAX_CONSECUTIVE_ACKS
+#else /* AKES_CONF_MAX_CONSECUTIVE_ACKS */
+#define MAX_CONSECUTIVE_ACKS MAX_CONSECUTIVE_HELLOACKS
+#endif /* AKES_CONF_MAX_CONSECUTIVE_ACKS */
 
 #define DEBUG 1
 #if DEBUG
@@ -66,20 +96,20 @@
 
 static void send_helloack(void *ptr);
 static void send_ack(struct akes_nbr_entry *entry);
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 static void send_updateack(struct akes_nbr_entry *entry);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 #if SECRDC_WITH_SECURE_PHASE_LOCK
 static void on_helloack_sent(void *ptr, int status, int transmissions);
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
-#if !AKES_NBR_WITH_PAIRWISE_KEYS
 static void on_ack_sent(void *ptr, int status, int transmissions);
-#endif /* !AKES_NBR_WITH_PAIRWISE_KEYS */
 
 /* A random challenge, which will be attached to HELLO commands */
 uint8_t akes_hello_challenge[AKES_NBR_CHALLENGE_LEN];
 static struct cmd_broker_subscription subscription;
 static struct leaky_bucket hello_bucket;
+static struct leaky_bucket helloack_bucket;
+static struct leaky_bucket ack_bucket;
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -91,7 +121,7 @@ prepare_update_command(uint8_t cmd_id,
   uint8_t payload_len;
 
   payload = adaptivesec_prepare_command(cmd_id, akes_nbr_get_addr(entry));
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   if(cmd_id == AKES_UPDATE_IDENTIFIER) {
     potr_set_seqno(entry->refs[status]);
   }
@@ -132,26 +162,26 @@ prepare_update_command(uint8_t cmd_id,
 
   /* write payload */
   if(status) {
-#if ILOCS_ENABLED
-    payload += ILOCS_WAKE_UP_COUNTER_LEN;
-#endif /* ILOCS_ENABLED */
+#if ILOS_ENABLED
+    payload += ILOS_WAKE_UP_COUNTER_LEN;
+#endif /* ILOS_ENABLED */
     akes_nbr_copy_challenge(payload, entry->tentative->challenge);
     payload += AKES_NBR_CHALLENGE_LEN;
   }
 
 #if SECRDC_WITH_SECURE_PHASE_LOCK
   if(cmd_id == AKES_ACK_IDENTIFIER) {
-#if ILOCS_ENABLED
-    payload += ILOCS_WAKE_UP_COUNTER_LEN;
-#endif /* ILOCS_ENABLED */
+#if ILOS_ENABLED
+    payload += ILOS_WAKE_UP_COUNTER_LEN;
+#endif /* ILOS_ENABLED */
     memcpy(payload, secrdc_get_last_random_number(), AKES_NBR_CHALLENGE_LEN);
     payload += AKES_NBR_CHALLENGE_LEN;
     payload[0] = entry->tentative->meta->strobe_index;
     payload++;
-#if ILOCS_ENABLED
-    ilocs_write_wake_up_counter(payload, secrdc_get_wake_up_counter(secrdc_get_last_wake_up_time()));
-    payload += ILOCS_WAKE_UP_COUNTER_LEN;
-#endif /* ILOCS_ENABLED */
+#if ILOS_ENABLED
+    ilos_write_wake_up_counter(payload, secrdc_get_wake_up_counter(secrdc_get_last_wake_up_time()));
+    payload += ILOS_WAKE_UP_COUNTER_LEN;
+#endif /* ILOS_ENABLED */
     payload[0] = secrdc_get_last_delta();
     payload++;
   }
@@ -218,15 +248,21 @@ akes_broadcast_hello(void)
 {
   uint8_t *payload;
 
+  if(leaky_bucket_is_full(&hello_bucket)) {
+    PRINTF("akes: HELLO bucket is full\n");
+    return;
+  }
+  leaky_bucket_pour(&hello_bucket);
+
 #if POTR_ENABLED
   potr_clear_cached_otps();
 #endif /* POTR_ENABLED */
 
   payload = adaptivesec_prepare_command(AKES_HELLO_IDENTIFIER, &linkaddr_null);
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   adaptivesec_add_security_header(NULL);
   anti_replay_suppress_counter();
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 
   /* write payload */
   akes_nbr_copy_challenge(payload, akes_hello_challenge);
@@ -275,9 +311,9 @@ on_hello(uint8_t *payload)
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION && !POTR_ENABLED */
     switch(ADAPTIVESEC_STRATEGY.verify(entry->permanent)) {
     case ADAPTIVESEC_VERIFY_SUCCESS:
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
       akes_nbr_prolong(entry->permanent);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
       akes_trickle_on_fresh_authentic_hello(entry->permanent);
       return CMD_BROKER_CONSUMED;
     case ADAPTIVESEC_VERIFY_INAUTHENTIC:
@@ -298,15 +334,15 @@ on_hello(uint8_t *payload)
     return CMD_BROKER_ERROR;
   }
 
-  leaky_bucket_pour(&hello_bucket, 1);
+  leaky_bucket_pour(&helloack_bucket);
 
   akes_nbr_copy_challenge(entry->tentative->challenge, payload);
   waiting_period = akes_get_random_waiting_period();
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   entry->tentative->meta->expiration_time = clock_seconds()
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
   entry->tentative->expiration_time = clock_seconds()
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
       + (waiting_period / CLOCK_SECOND)
       + AKES_ACK_DELAY;
   ctimer_set(&entry->tentative->meta->wait_timer,
@@ -373,14 +409,29 @@ on_helloack_sent(void *ptr, int status, int transmissions)
 }
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 /*---------------------------------------------------------------------------*/
+int
+akes_is_acceptable_helloack(void)
+{
+  if(leaky_bucket_is_full(&ack_bucket)) {
+    PRINTF("akes: ACK bucket is full\n");
+    return 0;
+  }
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
 static enum cmd_broker_result
 on_helloack(uint8_t *payload, int p_flag)
 {
   struct akes_nbr_entry *entry;
   uint8_t *secret;
   uint8_t key[AKES_NBR_CHALLENGE_LEN * 2];
+  uint8_t is_new;
 
   PRINTF("akes: Received HELLOACK\n");
+
+  if(!akes_is_acceptable_helloack()) {
+    return CMD_BROKER_ERROR;
+  }
 
   akes_nbr_delete_expired_tentatives();
   entry = akes_nbr_get_sender_entry();
@@ -397,22 +448,23 @@ on_helloack(uint8_t *payload, int p_flag)
 
   /* copy challenges and generate key */
   akes_nbr_copy_challenge(key, akes_hello_challenge);
-  akes_nbr_copy_challenge(key + AKES_NBR_CHALLENGE_LEN, payload + ILOCS_WAKE_UP_COUNTER_LEN);
+  akes_nbr_copy_challenge(key + AKES_NBR_CHALLENGE_LEN, payload + ILOS_WAKE_UP_COUNTER_LEN);
   generate_pairwise_key(key, secret);
 
 #if ANTI_REPLAY_WITH_SUPPRESSION
-  packetbuf_set_attr(PACKETBUF_ATTR_NEIGHBOR_INDEX, payload[ILOCS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN]);
-  anti_replay_parse_counter(payload + ILOCS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN + 1);
+  packetbuf_set_attr(PACKETBUF_ATTR_NEIGHBOR_INDEX, payload[ILOS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN]);
+  anti_replay_parse_counter(payload + ILOS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN + 1);
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
   if(adaptivesec_verify(key
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       , NULL
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
       )) {
     PRINTF("akes: Invalid HELLOACK\n");
     return CMD_BROKER_ERROR;
   }
 
+  is_new = 1;
   if(entry) {
     if(entry->permanent) {
 #if !POTR_ENABLED
@@ -429,6 +481,7 @@ on_helloack(uint8_t *payload, int p_flag)
 #endif /* !POTR_ENABLED */
       {
         akes_nbr_delete(entry, AKES_NBR_PERMANENT);
+        is_new = 0;
       }
     }
 
@@ -462,11 +515,11 @@ on_helloack(uint8_t *payload, int p_flag)
     akes_nbr_delete(entry, AKES_NBR_PERMANENT);
     return CMD_BROKER_ERROR;
   }
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   entry->tentative->meta->expiration_time = clock_seconds()
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
   entry->tentative->expiration_time = clock_seconds()
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
       + AKES_MAX_WAITING_PERIOD
       + 1 /* leeway */;
   akes_nbr_copy_key(entry->tentative->tentative_pairwise_key, key);
@@ -475,14 +528,14 @@ on_helloack(uint8_t *payload, int p_flag)
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 #if POTR_ENABLED
   /* create ACK OTP */
-  potr_create_special_otp(&entry->tentative->meta->otp, &linkaddr_node_addr, payload + ILOCS_WAKE_UP_COUNTER_LEN);
+  potr_create_special_otp(&entry->tentative->meta->otp, &linkaddr_node_addr, payload + ILOS_WAKE_UP_COUNTER_LEN);
 #endif /* POTR_ENABLED */
 #endif /* AKES_NBR_WITH_PAIRWISE_KEYS */
   akes_nbr_update(entry->permanent,
-      payload + ILOCS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN,
+      payload + ILOS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN,
       AKES_HELLOACK_IDENTIFIER);
+  entry->permanent->reestablished_keys = !is_new;
   send_ack(entry);
-  akes_trickle_on_new_nbr();
   return CMD_BROKER_CONSUMED;
 }
 /*---------------------------------------------------------------------------*/
@@ -490,30 +543,34 @@ static void
 send_ack(struct akes_nbr_entry *entry)
 {
   PRINTF("akes: Sending ACK\n");
+  leaky_bucket_pour(&ack_bucket);
   prepare_update_command(AKES_ACK_IDENTIFIER, entry, AKES_NBR_PERMANENT);
-#if AKES_NBR_WITH_PAIRWISE_KEYS
-  adaptivesec_send_command_frame();
-#else /* AKES_NBR_WITH_PAIRWISE_KEYS */
   NETSTACK_MAC.send(on_ack_sent, entry);
-#endif /* AKES_NBR_WITH_PAIRWISE_KEYS */
 }
 /*---------------------------------------------------------------------------*/
-#if !AKES_NBR_WITH_PAIRWISE_KEYS
 static void
 on_ack_sent(void *ptr, int status, int transmissions)
 {
   struct akes_nbr_entry *entry;
 
+  if(status == MAC_TX_DEFERRED) {
+    return;
+  }
+
   entry = ptr;
+#if !AKES_NBR_WITH_PAIRWISE_KEYS
   akes_nbr_delete(entry, AKES_NBR_TENTATIVE);
-#if SECRDC_WITH_SECURE_PHASE_LOCK
+#endif /* !AKES_NBR_WITH_PAIRWISE_KEYS */
   if(status != MAC_TX_OK) {
     PRINTF("akes: ACK was not acknowledged\n");
     akes_nbr_delete(entry, AKES_NBR_PERMANENT);
+    return;
   }
-#endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
+  if(entry->permanent->reestablished_keys) {
+    return;
+  }
+  akes_trickle_on_new_nbr();
 }
-#endif /* !AKES_NBR_WITH_PAIRWISE_KEYS */
 /*---------------------------------------------------------------------------*/
 int
 akes_is_acceptable_ack(struct akes_nbr_entry *entry)
@@ -557,7 +614,7 @@ on_ack(uint8_t *payload)
   entry->tentative = NULL;
   akes_nbr_update(entry->permanent,
 #if SECRDC_WITH_SECURE_PHASE_LOCK
-      payload + ILOCS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN + 1,
+      payload + ILOS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN + 1,
 #else /* SECRDC_WITH_SECURE_PHASE_LOCK */
       payload,
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
@@ -579,13 +636,13 @@ akes_send_update(struct akes_nbr_entry *entry)
 static enum cmd_broker_result
 on_update(uint8_t cmd_id, uint8_t *payload)
 {
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   struct akes_nbr_entry *entry;
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 
   PRINTF("akes: Received %s\n", (cmd_id == AKES_UPDATE_IDENTIFIER) ? "UPDATE" : "UPDATEACK");
 
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   entry = akes_nbr_get_sender_entry();
   if(!entry || !entry->permanent) {
     PRINTF("akes: Invalid %s\n", (cmd_id == AKES_UPDATE_IDENTIFIER) ? "UPDATE" : "UPDATEACK");
@@ -601,7 +658,7 @@ on_update(uint8_t cmd_id, uint8_t *payload)
     return CMD_BROKER_ERROR;
   }
 #endif /* !SECRDC_WITH_SECURE_PHASE_LOCK */
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 
 #if POTR_ENABLED
   if(potr_received_duplicate()) {
@@ -610,24 +667,24 @@ on_update(uint8_t cmd_id, uint8_t *payload)
   }
 #endif /* POTR_ENABLED */
 
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   akes_nbr_update(entry->permanent, payload, cmd_id);
 
   if(cmd_id == AKES_UPDATE_IDENTIFIER) {
     send_updateack(entry);
   }
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
   return CMD_BROKER_CONSUMED;
 }
 /*---------------------------------------------------------------------------*/
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 static void
 send_updateack(struct akes_nbr_entry *entry)
 {
   prepare_update_command(AKES_UPDATEACK_IDENTIFIER, entry, AKES_NBR_PERMANENT);
   adaptivesec_send_command_frame();
 }
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 /*---------------------------------------------------------------------------*/
 static enum cmd_broker_result
 on_command(uint8_t cmd_id, uint8_t *payload)
@@ -655,9 +712,9 @@ on_command(uint8_t cmd_id, uint8_t *payload)
   case AKES_ACK_IDENTIFIER:
     return on_ack(payload);
   case AKES_UPDATE_IDENTIFIER:
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   case AKES_UPDATEACK_IDENTIFIER:
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
     return on_update(cmd_id, payload);
   default:
     return CMD_BROKER_UNCONSUMED;
@@ -686,7 +743,9 @@ akes_get_receiver_status(void)
 void
 akes_init(void)
 {
-  leaky_bucket_init(&hello_bucket, AKES_NBR_MAX_TENTATIVES, MAX_HELLOACK_RATE);
+  leaky_bucket_init(&hello_bucket, MAX_CONSECUTIVE_HELLOS, MAX_HELLO_RATE);
+  leaky_bucket_init(&helloack_bucket, MAX_CONSECUTIVE_HELLOACKS, MAX_HELLOACK_RATE);
+  leaky_bucket_init(&ack_bucket, MAX_CONSECUTIVE_ACKS, MAX_ACK_RATE);
   subscription.on_command = on_command;
   cmd_broker_subscribe(&subscription);
   akes_nbr_init();

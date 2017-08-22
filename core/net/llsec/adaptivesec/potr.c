@@ -92,16 +92,13 @@
 #if POTR_ENABLED
 static void read_otp(void);
 
-#if ILOCS_ENABLED
-uint8_t potr_my_broadcast_seqno;
-#endif /* ILOCS_ENABLED */
 static uint8_t potr_key[16] = POTR_KEY;
 static potr_otp_t cached_otps[MAX_CACHED_OTPS];
 static uint8_t cached_otps_index;
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 static linkaddr_t sender_of_last_accepted_broadcast;
-static ilocs_wake_up_counter_t wake_up_counter_at_last_accepted_broadcast;
-#endif /* ILOCS_ENABLED */
+static ilos_wake_up_counter_t wake_up_counter_at_last_accepted_broadcast;
+#endif /* ILOS_ENABLED */
 #if POTR_CONF_WITH_ANYCAST
 static uint8_t anycast_ll_addr[LINKADDR_SIZE] = POTR_LL_ANYCAST_ADDR;
 static uint8_t last_anycast_type;
@@ -179,7 +176,7 @@ potr_received_duplicate(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 static void
 write_frame_counter(uint8_t *p)
 {
@@ -189,7 +186,7 @@ write_frame_counter(uint8_t *p)
   frame_counter.u16[1] = packetbuf_attr(PACKETBUF_ATTR_FRAME_COUNTER_BYTES_2_3);
   memcpy(p, frame_counter.u8, 4);
 }
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 /*---------------------------------------------------------------------------*/
 #if SECRDC_WITH_SECURE_PHASE_LOCK
 int
@@ -338,7 +335,7 @@ do_create_normal_otp(uint8_t *p, uint8_t *group_key, uint8_t *block)
   memcpy(p, block, POTR_OTP_LEN);
 }
 /*---------------------------------------------------------------------------*/
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 static void
 create_normal_otp(uint8_t *p, int forward, void *entry)
 {
@@ -372,7 +369,7 @@ create_normal_otp(uint8_t *p, int forward, void *entry)
 
   do_create_normal_otp(p, group_key, block);
 }
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
 static void
 create_normal_otp(uint8_t *p, uint8_t *group_key)
 {
@@ -388,7 +385,7 @@ create_normal_otp(uint8_t *p, uint8_t *group_key)
 
   do_create_normal_otp(p, group_key, block);
 }
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
 static void
@@ -478,7 +475,7 @@ create(void)
   memcpy(p, linkaddr_node_addr.u8, LINKADDR_SIZE);
   p += LINKADDR_SIZE;
 
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   /* Frame Counter */
 #if LLSEC802154_USES_AUX_HEADER
   write_frame_counter(p);
@@ -487,7 +484,7 @@ create(void)
   p[0] = packetbuf_attr(PACKETBUF_ATTR_FRAME_COUNTER_BYTES_0_1) & 0xFF;
   p += 1;
 #endif /* LLSEC802154_USES_AUX_HEADER */
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 
   /* OTP */
   switch(type) {
@@ -501,7 +498,7 @@ create(void)
     /* create ACK OTP */
     potr_create_special_otp(&entry->tentative->meta->otp,
         packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-        ((uint8_t *) packetbuf_dataptr()) + ILOCS_WAKE_UP_COUNTER_LEN + 1);
+        ((uint8_t *) packetbuf_dataptr()) + ILOS_WAKE_UP_COUNTER_LEN + 1);
     break;
   case POTR_FRAME_TYPE_ACK:
     if(!entry || !entry->tentative) {
@@ -523,11 +520,11 @@ create(void)
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
   default:
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     create_normal_otp(p, 1, entry);
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
     create_normal_otp(p, adaptivesec_group_key);
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     break;
   }
   p += POTR_OTP_LEN;
@@ -622,7 +619,7 @@ potr_parse_and_validate(void)
   memcpy(addr.u8, p, LINKADDR_SIZE);
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &addr);
   entry = akes_nbr_get_sender_entry();
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   switch(type) {
     case POTR_FRAME_TYPE_BROADCAST_DATA:
     case POTR_FRAME_TYPE_BROADCAST_COMMAND:
@@ -638,10 +635,10 @@ potr_parse_and_validate(void)
     default:
       break;
   }
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
   p += LINKADDR_SIZE;
 
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   /* Frame Counter */
 #if LLSEC802154_USES_AUX_HEADER
   anti_replay_parse_counter(p);
@@ -655,7 +652,7 @@ potr_parse_and_validate(void)
     anti_replay_restore_counter(&entry->permanent->anti_replay_info);
   }
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 
   /* OTP */
   switch(type) {
@@ -663,6 +660,11 @@ potr_parse_and_validate(void)
   case POTR_FRAME_TYPE_HELLOACK_P:
     if(cached_otps_index >= MAX_CACHED_OTPS) {
       PRINTF("potr: Too many HELLOACK OTPs cached\n");
+      return FRAMER_FAILED;
+    }
+
+    if(!akes_is_acceptable_helloack()) {
+      PRINTF("potr: Unacceptable HELLOACK\n");
       return FRAMER_FAILED;
     }
 
@@ -741,11 +743,11 @@ potr_parse_and_validate(void)
       return FRAMER_FAILED;
     }
 
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     create_normal_otp(otp.u8, 0, entry);
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
     create_normal_otp(otp.u8, entry->permanent->group_key);
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     read_otp();
 
     if(memcmp(otp.u8, p, POTR_OTP_LEN)) {
@@ -755,7 +757,7 @@ potr_parse_and_validate(void)
       PRINTF("potr: Invalid OTP\n");
       return FRAMER_FAILED;
     }
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     else {
       switch(type) {
       case POTR_FRAME_TYPE_BROADCAST_DATA:
@@ -770,12 +772,12 @@ potr_parse_and_validate(void)
         break;
       }
     }
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
     if(anti_replay_was_replayed(&entry->permanent->anti_replay_info)) {
       PRINTF("potr: Replayed OTP\n");
       return FRAMER_FAILED;
     }
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     break;
   }
   p += POTR_OTP_LEN;

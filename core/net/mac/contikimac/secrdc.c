@@ -183,7 +183,7 @@
 #if SECRDC_WITH_SECURE_PHASE_LOCK
 #define ACKNOWLEDGEMENT_LEN (2 + ADAPTIVESEC_UNICAST_MIC_LEN)
 #define HELLOACK_ACKNOWLEDGEMENT_LEN (1 + AKES_NBR_CHALLENGE_LEN)
-#define ACK_ACKNOWLEDGEMENT_LEN (ACKNOWLEDGEMENT_LEN + ILOCS_WAKE_UP_COUNTER_LEN)
+#define ACK_ACKNOWLEDGEMENT_LEN (ACKNOWLEDGEMENT_LEN + ILOS_WAKE_UP_COUNTER_LEN)
 #else /* SECRDC_WITH_SECURE_PHASE_LOCK */
 #define ACKNOWLEDGEMENT_LEN 2
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
@@ -307,9 +307,9 @@ static union {
     uint8_t acknowledgement_len;
     rtimer_clock_t uncertainty;
     rtimer_clock_t t1[2];
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     rtimer_clock_t strobe_start;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 #else /* SECRDC_WITH_SECURE_PHASE_LOCK */
     rtimer_clock_t t0[2];
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
@@ -349,10 +349,10 @@ LIST(buffered_frames_list);
 #if SECRDC_WITH_SECURE_PHASE_LOCK
 static volatile rtimer_clock_t sfd_timestamp;
 static uint8_t last_random_number[AKES_NBR_CHALLENGE_LEN];
-#if ILOCS_ENABLED
-static ilocs_wake_up_counter_t my_wake_up_counter;
+#if ILOS_ENABLED
+static ilos_wake_up_counter_t my_wake_up_counter;
 static rtimer_clock_t my_wake_up_counter_last_increment;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
 static rtimer_clock_t real_strobe_time;
@@ -500,10 +500,10 @@ duty_cycle(void)
   PT_BEGIN(&pt);
 
   is_duty_cycling = 1;
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   my_wake_up_counter = secrdc_get_wake_up_counter(duty_cycle_next);
   my_wake_up_counter_last_increment = duty_cycle_next;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 #ifdef LPM_CONF_ENABLE
   lpm_set_max_pm(1);
 #endif /* LPM_CONF_ENABLE */
@@ -725,9 +725,9 @@ prepare_acknowledgement(void)
   {
     u.duty_cycle.acknowledgement[1] = secrdc_get_last_delta();
     if(u.duty_cycle.is_ack) {
-#if ILOCS_ENABLED
-      ilocs_write_wake_up_counter(u.duty_cycle.acknowledgement + 2, secrdc_get_wake_up_counter(RTIMER_NOW()));
-#endif /* ILOCS_ENABLED */
+#if ILOS_ENABLED
+      ilos_write_wake_up_counter(u.duty_cycle.acknowledgement + 2, secrdc_get_wake_up_counter(RTIMER_NOW()));
+#endif /* ILOS_ENABLED */
       u.duty_cycle.acknowledgement_len = ACK_ACKNOWLEDGEMENT_LEN;
     } else {
       u.duty_cycle.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
@@ -789,9 +789,9 @@ create_acknowledgement_mic(void)
     CCM_STAR.set_key(akes_nbr_get_sender_entry()->permanent->group_key);
   }
   ccm_star_packetbuf_set_nonce(nonce, 0
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       , NULL
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
   );
   ccm_star_packetbuf_to_acknowledgement_nonce(nonce);
   CCM_STAR.aead(nonce,
@@ -845,12 +845,12 @@ is_valid_ack(struct akes_nbr_entry *entry)
   packetbuf_set_attr(PACKETBUF_ATTR_UNENCRYPTED_BYTES,
       packetbuf_datalen() - AES_128_KEY_LENGTH - ADAPTIVESEC_UNICAST_MIC_LEN);
 
-  if((payload[ILOCS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN] != entry->tentative->meta->strobe_index)
-      || memcmp(payload + ILOCS_WAKE_UP_COUNTER_LEN, entry->tentative->meta->tail, AKES_NBR_CHALLENGE_LEN)
+  if((payload[ILOS_WAKE_UP_COUNTER_LEN + AKES_NBR_CHALLENGE_LEN] != entry->tentative->meta->strobe_index)
+      || memcmp(payload + ILOS_WAKE_UP_COUNTER_LEN, entry->tentative->meta->tail, AKES_NBR_CHALLENGE_LEN)
       || adaptivesec_verify(entry->tentative->tentative_pairwise_key
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
           , NULL
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     )) {
     PRINTF("secrdc: Invalid ACK\n");
     akes_nbr_delete(entry, AKES_NBR_TENTATIVE);
@@ -923,7 +923,7 @@ secrdc_get_last_but_one_t1(void)
   return u.strobe.t1[0];
 }
 /*---------------------------------------------------------------------------*/
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 rtimer_clock_t
 secrdc_get_last_wake_up_time(void)
 {
@@ -936,10 +936,10 @@ secrdc_get_next_strobe_start(void)
   return u.strobe.strobe_start;
 }
 /*---------------------------------------------------------------------------*/
-ilocs_wake_up_counter_t
+ilos_wake_up_counter_t
 secrdc_get_wake_up_counter(rtimer_clock_t t)
 {
-  ilocs_wake_up_counter_t result;
+  ilos_wake_up_counter_t result;
 
   result = my_wake_up_counter;
   result.u32 += rtimer_delta(my_wake_up_counter_last_increment, t) >> SECRDC_WAKEUP_INTERVAL_BITS;
@@ -994,7 +994,7 @@ secrdc_specialize_anycast_frame_type(void)
   return type;
 }
 #endif /* POTR_CONF_WITH_ANYCAST */
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(post_processing, ev, data)
@@ -1046,7 +1046,7 @@ PROCESS_THREAD(post_processing, ev, data)
         u.strobe.is_anycast = packetbuf_holds_anycast();
 #endif /* POTR_CONF_WITH_ANYCAST */
 
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
         if(u.strobe.is_broadcast) {
           u.strobe.strobe_start = shift_to_future(duty_cycle_next)
               - (WAKEUP_INTERVAL / 2)
@@ -1056,23 +1056,23 @@ PROCESS_THREAD(post_processing, ev, data)
           if(!(secrdc_get_wake_up_counter(u.strobe.strobe_start).u32 & 1)) {
             u.strobe.strobe_start += WAKEUP_INTERVAL;
           }
-          while(!rtimer_is_schedulable(u.strobe.strobe_start, ILOCS_MIN_TIME_TO_STROBE + 1)) {
+          while(!rtimer_is_schedulable(u.strobe.strobe_start, ILOS_MIN_TIME_TO_STROBE + 1)) {
             u.strobe.strobe_start += 2 * WAKEUP_INTERVAL;
           }
 #if POTR_CONF_WITH_ANYCAST
         } else if(u.strobe.is_anycast) {
-          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
-          // u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE;
+          u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
+          // u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE;
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
 #endif /* POTR_CONF_WITH_ANYCAST */
         } else if(potr_is_helloack()) {
-          ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
+          ilos_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
           u.strobe.is_helloack = 1;
           u.strobe.acknowledgement_len = HELLOACK_ACKNOWLEDGEMENT_LEN;
-          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE;
+          u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE;
         } else if(potr_is_ack()) {
-          ilocs_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
+          ilos_write_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1, secrdc_get_wake_up_counter(RTIMER_NOW()));
           akes_nbr_copy_key(u.strobe.acknowledgement_key, akes_nbr_get_receiver_entry()->tentative->tentative_pairwise_key);
           u.strobe.is_ack = 1;
           u.strobe.acknowledgement_len = ACK_ACKNOWLEDGEMENT_LEN;
@@ -1082,7 +1082,7 @@ PROCESS_THREAD(post_processing, ev, data)
             on_strobed();
             continue;
           }
-          u.strobe.strobe_start = RTIMER_NOW() + ILOCS_MIN_TIME_TO_STROBE;
+          u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE;
         } else {
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
@@ -1108,11 +1108,11 @@ PROCESS_THREAD(post_processing, ev, data)
               - TRANSMIT_CALIBRATION_TIME
               - u.strobe.uncertainty);
 
-          while(!rtimer_is_schedulable(u.strobe.strobe_start, ILOCS_MIN_TIME_TO_STROBE + 1)) {
+          while(!rtimer_is_schedulable(u.strobe.strobe_start, ILOS_MIN_TIME_TO_STROBE + 1)) {
             u.strobe.strobe_start += WAKEUP_INTERVAL;
           }
         }
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 
         /* create frame */
 #if !POTR_ENABLED
@@ -1144,7 +1144,7 @@ PROCESS_THREAD(post_processing, ev, data)
         }
 
         /* starting to strobe */
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
         if(!rtimer_is_schedulable(u.strobe.strobe_start, RTIMER_GUARD_TIME + 1)) {
           PRINTF("secrdc: strobe starts too early\n");
           u.strobe.result = MAC_TX_ERR_FATAL;
@@ -1243,15 +1243,15 @@ PROCESS_THREAD(post_processing, ev, data)
 #if SECRDC_WITH_SECURE_PHASE_LOCK
 void
 secrdc_cache_unsecured_frame(uint8_t *key
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 )
 {
   ccm_star_packetbuf_set_nonce(u.strobe.nonce, 1
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       , phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
   );
   u.strobe.shall_encrypt = adaptivesec_get_sec_lvl() & (1 << 2);
   if(u.strobe.shall_encrypt) {
@@ -1436,19 +1436,19 @@ strobe(void)
             memcpy(last_random_number, acknowledgement + 1, AKES_NBR_CHALLENGE_LEN);
             break;
           }
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
           if(u.strobe.is_ack) {
-            u.strobe.phase->his_wake_up_counter_at_t = ilocs_parse_wake_up_counter(acknowledgement + 2);
+            u.strobe.phase->his_wake_up_counter_at_t = ilos_parse_wake_up_counter(acknowledgement + 2);
           } else {
-            u.strobe.phase->his_wake_up_counter_at_t = ilocs_parse_wake_up_counter(u.strobe.nonce + 9);
+            u.strobe.phase->his_wake_up_counter_at_t = ilos_parse_wake_up_counter(u.strobe.nonce + 9);
             u.strobe.phase->his_wake_up_counter_at_t.u32 -= 0x40000000;
           }
 
           // printf("real_strobe_time: %d\n", real_strobe_time);
           real_strobe_time = 0;
           last_strobe_time = 0;
-
-#endif /* ILOCS_ENABLED */
+          
+#endif /* ILOS_ENABLED */
           u.strobe.phase->t = u.strobe.t1[0] - acknowledgement[1];
 #else /* SECRDC_WITH_SECURE_PHASE_LOCK */
           u.strobe.phase->t = u.strobe.t0[0];

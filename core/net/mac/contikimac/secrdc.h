@@ -44,7 +44,7 @@
 #include "net/llsec/adaptivesec/potr.h"
 #include "sys/rtimer.h"
 #include "net/netstack.h"
-#include "net/mac/contikimac/ilocs.h"
+#include "net/mac/contikimac/ilos.h"
 
 #ifdef SECRDC_CONF_ENABLED
 #define SECRDC_ENABLED SECRDC_CONF_ENABLED
@@ -81,7 +81,7 @@
 #define SECRDC_WITH_PHASE_LOCK (SECRDC_WITH_SECURE_PHASE_LOCK || SECRDC_WITH_ORIGINAL_PHASE_LOCK)
 #define SECRDC_UPDATE_THRESHOLD (RTIMER_ARCH_SECOND * SECRDC_UPDATE_THRESHOLD_SECONDS)
 #define SECRDC_WAKEUP_INTERVAL (RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE)
-#define SECRDC_WAKEUP_INTERVAL_BITS (ILOCS_BITS_TO_REPRESENT((SECRDC_WAKEUP_INTERVAL - 1)))
+#define SECRDC_WAKEUP_INTERVAL_BITS (ILOS_BITS_TO_REPRESENT((SECRDC_WAKEUP_INTERVAL - 1)))
 
 #if SECRDC_WITH_SECURE_PHASE_LOCK
 uint8_t secrdc_get_last_delta(void);
@@ -89,22 +89,22 @@ uint8_t secrdc_get_last_strobe_index(void);
 uint8_t *secrdc_get_last_random_number(void);
 rtimer_clock_t secrdc_get_last_but_one_t1(void);
 void secrdc_cache_unsecured_frame(uint8_t *key
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 );
 int potr_has_strobe_index(enum potr_frame_type type);
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 rtimer_clock_t secrdc_get_last_wake_up_time(void);
 rtimer_clock_t secrdc_get_next_strobe_start(void);
-ilocs_wake_up_counter_t secrdc_get_wake_up_counter(rtimer_clock_t t);
+ilos_wake_up_counter_t secrdc_get_wake_up_counter(rtimer_clock_t t);
 #if POTR_CONF_WITH_ANYCAST
 rtimer_clock_t secrdc_get_strobe_start_time(void);
 rtimer_clock_t secrdc_get_wakeup_interval(void);
 rtimer_clock_t secrdc_get_inter_frame_length(void);
 uint8_t secrdc_specialize_anycast_frame_type(void);
 #endif /* POTR_CONF_WITH_ANYCAST */
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
 extern const struct rdc_driver secrdc_driver;

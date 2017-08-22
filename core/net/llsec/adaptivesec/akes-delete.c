@@ -59,6 +59,12 @@
 #define UPDATEACK_WAITING_PERIOD (5) /* seconds */
 #endif /* AKES_DELETE_CONF_UPDATEACK_WAITING_PERIOD */
 
+#ifdef AKES_DELETE_CONF_ENABLED
+#define ENABLED AKES_DELETE_CONF_ENABLED
+#else /* AKES_DELETE_CONF_ENABLED */
+#define ENABLED 1
+#endif /* AKES_DELETE_CONF_ENABLED */
+
 #define DEBUG 0
 #if DEBUG
 #include <stdio.h>
@@ -67,6 +73,7 @@
 #define PRINTF(...)
 #endif /* DEBUG */
 
+#if ENABLED
 PROCESS(delete_process, "delete_process");
 
 /*---------------------------------------------------------------------------*/
@@ -74,7 +81,8 @@ PROCESS_THREAD(delete_process, ev, data)
 {
   static struct etimer update_check_timer;
   static struct etimer update_send_timer;
-  static struct akes_nbr_entry *next;
+  struct akes_nbr_entry *next;
+  static linkaddr_t addr;
 
   PROCESS_BEGIN();
 
@@ -90,14 +98,18 @@ PROCESS_THREAD(delete_process, ev, data)
         next = akes_nbr_next(next);
         continue;
       }
+      linkaddr_copy(&addr, akes_nbr_get_addr(next));
 
       /* wait for a random period of time to avoid collisions */
       etimer_set(&update_send_timer, akes_get_random_waiting_period());
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&update_send_timer));
 
       /* check if something happened in the meantime */
-      if(!akes_nbr_is_expired(next, AKES_NBR_PERMANENT)) {
-        next = akes_nbr_next(next);
+      next = akes_nbr_get_entry(&addr);
+      if(!next
+          || !next->permanent
+          || !akes_nbr_is_expired(next, AKES_NBR_PERMANENT)) {
+        next = akes_nbr_head();
         continue;
       }
 
@@ -107,12 +119,14 @@ PROCESS_THREAD(delete_process, ev, data)
       PRINTF("akes-delete: Sent UPDATE\n");
       etimer_set(&update_send_timer, UPDATEACK_WAITING_PERIOD * CLOCK_SECOND);
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&update_send_timer));
-      if(akes_nbr_is_expired(next, AKES_NBR_PERMANENT)) {
+
+      next = akes_nbr_get_entry(&addr);
+      if(next
+          && next->permanent
+          && akes_nbr_is_expired(next, AKES_NBR_PERMANENT)) {
         akes_nbr_delete(next, AKES_NBR_PERMANENT);
-        next = akes_nbr_head();
-      } else {
-        next = akes_nbr_next(next);
       }
+      next = akes_nbr_head();
     }
     etimer_restart(&update_check_timer);
   }
@@ -131,4 +145,18 @@ akes_delete_init(void)
 {
   process_start(&delete_process, NULL);
 }
+/*---------------------------------------------------------------------------*/
+#else /* ENABLED */
+void
+akes_delete_on_update_sent(void *ptr, int status, int transmissions)
+{
+
+}
+/*---------------------------------------------------------------------------*/
+void
+akes_delete_init(void)
+{
+
+}
+#endif /* ENABLED */
 /*---------------------------------------------------------------------------*/

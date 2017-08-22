@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Hasso-Plattner-Institut.
+ * Copyright (c) 2017, Robert Olsson 
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,39 +28,80 @@
  *
  * This file is part of the Contiki operating system.
  *
+ * Author  : Robert Olsson 
+ * roolss@kth.se & robert@radio-sensors.com
+ * Created : 2017-04-22
  */
 
 /**
  * \file
- *         Intra-Layer Optimization for ContikiMAC Security (ILOCS)
- * \author
- *         Konrad Krentz <konrad.krentz@gmail.com>
+ *         A simple AES128 crypto emmgine test for Atmel radios
  */
 
-#include "net/mac/contikimac/ilocs.h"
-#include "net/llsec/llsec802154.h"
-#include "net/packetbuf.h"
-#include "net/llsec/adaptivesec/akes-nbr.h"
+#include "contiki.h"
+#include "dev/radio.h"
+#include "net/netstack.h"
+#include "sys/etimer.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "rf230bb.h"
 
-#if ILOCS_ENABLED
-uint8_t ilocs_my_broadcast_seqno;
+PROCESS(aes_crypto_process, "AES HW crypto process");
+AUTOSTART_PROCESSES(&aes_crypto_process);
 
-/*---------------------------------------------------------------------------*/
-ilocs_wake_up_counter_t
-ilocs_parse_wake_up_counter(uint8_t *src)
+unsigned char aes_key[16]   = "abcdefghijklmnop";
+unsigned char aes_p[128];
+unsigned char aes_c[128];
+unsigned char aes_s[128];
+unsigned char tmp[16];
+uint8_t i;
+int res;
+
+PROCESS_THREAD(aes_crypto_process, ev, data)
 {
-  ilocs_wake_up_counter_t counter;
+  PROCESS_BEGIN();
 
-  memcpy(counter.u8, src, 4);
-  counter.u32 = LLSEC802154_HTONL(counter.u32);
-  return counter;
+  /* AES engine on */
+  NETSTACK_RADIO.on();
+
+  strcpy((char *)aes_s, "Teststring______");
+
+  for(i = 0; i < 16; i++) {
+    printf("%02X", aes_s[i]);
+  }
+  printf(" Uncrypted \n");
+
+  res = rf230_aes_encrypt_ebc(aes_key, aes_s, aes_c);
+  if(!res) {
+    printf("ERR encryption\n");
+    exit(0);
+  }
+  for(i = 0; i < 16; i++) {
+    printf("%02X", aes_c[i]);
+  }
+  printf(" AES-128 EBC Crypted\n");
+
+  res = rf230_aes_decrypt_ebc(aes_key, aes_c, aes_p);
+  if(!res) {
+    printf("ERR decryption\n");
+    exit(0);
+  }
+  for(i = 0; i < 16; i++) {
+    printf("%02X", aes_p[i]);
+  }
+  printf(" Decrypted \n");
+
+  res = rf230_aes_encrypt_cbc(aes_key, aes_s, sizeof(aes_s), aes_c);
+  if(!res) {
+    printf("ERR encryption\n");
+    exit(0);
+  }
+  for(i = 0; i < 16; i++) {
+    printf("%02X", aes_c[i]);
+  }
+  printf(" AES-128 MIC\n");
+
+  PROCESS_END();
 }
-/*---------------------------------------------------------------------------*/
-void
-ilocs_write_wake_up_counter(uint8_t *dst, ilocs_wake_up_counter_t counter)
-{
-  counter.u32 = LLSEC802154_HTONL(counter.u32);
-  memcpy(dst, counter.u8, 4);
-}
-/*---------------------------------------------------------------------------*/
-#endif /* ILOCS_ENABLED */
+

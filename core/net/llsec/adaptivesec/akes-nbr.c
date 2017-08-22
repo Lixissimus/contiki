@@ -187,9 +187,9 @@ akes_nbr_new(enum akes_nbr_status status)
     return NULL;
   }
   nbr_table_lock(entries_table, entry);
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   anti_replay_init_info(&entry->refs[status]->anti_replay_info);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
   if(status) {
     entry->refs[status]->meta = memb_alloc(&tentatives_memb);
     if(!entry->refs[status]->meta) {
@@ -218,10 +218,10 @@ akes_nbr_update(struct akes_nbr *nbr, uint8_t *data, int cmd_id)
     t1 = nbr->meta->t1;
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
     free_tentative_metadata(nbr);
-#if ILOCS_ENABLED
-    nbr->phase.his_wake_up_counter_at_t = ilocs_parse_wake_up_counter(data);
-    data += ILOCS_WAKE_UP_COUNTER_LEN;
-#endif /* ILOCS_ENABLED */
+#if ILOS_ENABLED
+    nbr->phase.his_wake_up_counter_at_t = ilos_parse_wake_up_counter(data);
+    data += ILOS_WAKE_UP_COUNTER_LEN;
+#endif /* ILOS_ENABLED */
 #if SECRDC_WITH_SECURE_PHASE_LOCK
     nbr->phase.t = t1 - data[0];
     data += 1;
@@ -233,15 +233,15 @@ akes_nbr_update(struct akes_nbr *nbr, uint8_t *data, int cmd_id)
     break;
   }
 
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   anti_replay_was_replayed(&nbr->anti_replay_info);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 #if ANTI_REPLAY_WITH_SUPPRESSION
   nbr->last_was_broadcast = 1;
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   akes_nbr_prolong(nbr);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 
 #if AKES_NBR_WITH_INDICES
   nbr->foreign_index = data[0];
@@ -316,7 +316,7 @@ akes_nbr_update(struct akes_nbr *nbr, uint8_t *data, int cmd_id)
 #endif /* DEBUG */
 }
 /*---------------------------------------------------------------------------*/
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 void
 akes_nbr_do_prolong(struct akes_nbr *nbr, uint16_t seconds)
 {
@@ -341,18 +341,24 @@ akes_nbr_prolong(struct akes_nbr *nbr)
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
   akes_nbr_do_prolong(nbr, LIFETIME);
 }
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
+/*---------------------------------------------------------------------------*/
+struct akes_nbr_entry *
+akes_nbr_get_entry(const linkaddr_t *addr)
+{
+  return nbr_table_get_from_lladdr(entries_table, addr);
+}
 /*---------------------------------------------------------------------------*/
 struct akes_nbr_entry *
 akes_nbr_get_sender_entry(void)
 {
-  return nbr_table_get_from_lladdr(entries_table, packetbuf_addr(PACKETBUF_ADDR_SENDER));
+  return akes_nbr_get_entry(packetbuf_addr(PACKETBUF_ADDR_SENDER));
 }
 /*---------------------------------------------------------------------------*/
 struct akes_nbr_entry *
 akes_nbr_get_receiver_entry(void)
 {
-  return nbr_table_get_from_lladdr(entries_table, packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
+  return akes_nbr_get_entry(packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -371,21 +377,21 @@ akes_nbr_delete(struct akes_nbr_entry *entry, enum akes_nbr_status status)
 int
 akes_nbr_is_expired(struct akes_nbr_entry *entry, enum akes_nbr_status status)
 {
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   if(status) {
     return entry->tentative->meta->expiration_time < clock_seconds();
   }
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
   if(entry->refs[status]->expiration_time < clock_seconds()) {
     return 1;
   }
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 #if SECRDC_WITH_SECURE_PHASE_LOCK
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   if(status) {
     return 0;
   }
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
   return rtimer_delta(entry->refs[status]->phase.t, RTIMER_NOW()) >= SECRDC_UPDATE_THRESHOLD;
 #else /* SECRDC_WITH_SECURE_PHASE_LOCK */
   return 0;

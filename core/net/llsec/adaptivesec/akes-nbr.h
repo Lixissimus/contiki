@@ -48,7 +48,7 @@
 #include "sys/ctimer.h"
 #include "net/llsec/adaptivesec/potr.h"
 #include "net/mac/contikimac/secrdc.h"
-#include "net/mac/contikimac/ilocs.h"
+#include "net/mac/contikimac/ilos.h"
 
 #ifdef AKES_NBR_CONF_MAX_TENTATIVES
 #define AKES_NBR_MAX_TENTATIVES AKES_NBR_CONF_MAX_TENTATIVES
@@ -122,19 +122,19 @@ struct akes_nbr_tentative {
   rtimer_clock_t t1;
   uint8_t strobe_index;
   uint8_t tail[AKES_NBR_CHALLENGE_LEN];
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   unsigned long expiration_time;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 };
 
 struct akes_nbr {
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 #if LLSEC802154_USES_FRAME_COUNTER
   struct anti_replay_info anti_replay_info;
 #endif /* LLSEC802154_USES_FRAME_COUNTER */
   unsigned long expiration_time;
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 #if SECRDC_WITH_ORIGINAL_PHASE_LOCK
   struct secrdc_phase phase;
 #endif /* SECRDC_WITH_ORIGINAL_PHASE_LOCK */
@@ -148,7 +148,8 @@ struct akes_nbr {
 #if AKES_NBR_WITH_GROUP_KEYS
       uint8_t group_key[AES_128_KEY_LENGTH];
 #endif /* AKES_NBR_WITH_GROUP_KEYS */
-      uint8_t sent_authentic_hello;
+      uint8_t sent_authentic_hello:1;
+      uint8_t reestablished_keys:1;
 #if !POTR_ENABLED && !AKES_NBR_WITH_PAIRWISE_KEYS
       uint8_t helloack_challenge[AKES_NBR_CACHED_HELLOACK_CHALLENGE_LEN];
 #endif /* !POTR_ENABLED && !AKES_NBR_WITH_PAIRWISE_KEYS */
@@ -193,10 +194,11 @@ int akes_nbr_count(enum akes_nbr_status status);
 int akes_nbr_free_slots(void);
 struct akes_nbr_entry *akes_nbr_new(enum akes_nbr_status status);
 void akes_nbr_update(struct akes_nbr *nbr, uint8_t *data, int cmd_id);
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
 void akes_nbr_do_prolong(struct akes_nbr *nbr, uint16_t seconds);
 void akes_nbr_prolong(struct akes_nbr *nbr);
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
+struct akes_nbr_entry *akes_nbr_get_entry(const linkaddr_t *addr);
 struct akes_nbr_entry *akes_nbr_get_sender_entry(void);
 struct akes_nbr_entry *akes_nbr_get_receiver_entry(void);
 void akes_nbr_delete(struct akes_nbr_entry *entry, enum akes_nbr_status status);

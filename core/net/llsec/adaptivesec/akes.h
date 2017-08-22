@@ -84,9 +84,9 @@ enum {
   AKES_ACK_IDENTIFIER = 0x0C,
 #endif /* POTR_ENABLED */
   AKES_UPDATE_IDENTIFIER = 0x0E,
-#if !ILOCS_ENABLED
+#if !ILOS_ENABLED
   AKES_UPDATEACK_IDENTIFIER = 0x0F
-#endif /* !ILOCS_ENABLED */
+#endif /* !ILOS_ENABLED */
 };
 
 /**
@@ -117,6 +117,7 @@ void akes_change_hello_challenge(void);
 void akes_broadcast_hello(void);
 clock_time_t akes_get_random_waiting_period(void);
 int akes_is_acceptable_hello(struct akes_nbr_entry *entry);
+int akes_is_acceptable_helloack(void);
 int akes_is_acceptable_ack(struct akes_nbr_entry *entry);
 void akes_init(void);
 void akes_send_update(struct akes_nbr_entry *entry);

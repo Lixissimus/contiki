@@ -42,19 +42,19 @@
 #define CCM_STAR_PACKETBUF_H_
 
 #include "lib/ccm-star.h"
-#include "net/mac/contikimac/ilocs.h"
+#include "net/mac/contikimac/ilos.h"
 
 #if POTR_CONF_WITH_ANYCAST
-ilocs_wake_up_counter_t restore_anycast_wakeup_counter(struct secrdc_phase *phase);
+ilos_wake_up_counter_t restore_anycast_wakeup_counter(struct secrdc_phase *phase);
 #endif /* POTR_CONF_WITH_ANYCAST */
 void ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
     , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 );
-#if ILOCS_ENABLED
-ilocs_wake_up_counter_t ccm_star_packetbuf_predict_wake_up_counter(struct secrdc_phase *phase);
-#endif /* ILOCS_ENABLED */
+#if ILOS_ENABLED
+ilos_wake_up_counter_t ccm_star_packetbuf_predict_wake_up_counter(struct secrdc_phase *phase);
+#endif /* ILOS_ENABLED */
 void ccm_star_packetbuf_to_acknowledgement_nonce(uint8_t *nonce);
 
 #endif /* CCM_STAR_PACKETBUF_H_ */

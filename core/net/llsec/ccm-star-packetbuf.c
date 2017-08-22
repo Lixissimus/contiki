@@ -78,11 +78,11 @@ get_extended_address(const linkaddr_t *addr)
 }
 #endif /* LINKADDR_SIZE == 2 */
 /*---------------------------------------------------------------------------*/
-#if ILOCS_ENABLED
-ilocs_wake_up_counter_t
+#if ILOS_ENABLED
+ilos_wake_up_counter_t
 ccm_star_packetbuf_predict_wake_up_counter(struct secrdc_phase *phase)
 {
-  ilocs_wake_up_counter_t count;
+  ilos_wake_up_counter_t count;
 
   count.u32 = phase->his_wake_up_counter_at_t.u32
       + (rtimer_delta(phase->t, secrdc_get_next_strobe_start()) >> SECRDC_WAKEUP_INTERVAL_BITS)
@@ -91,13 +91,13 @@ ccm_star_packetbuf_predict_wake_up_counter(struct secrdc_phase *phase)
   return count;
 }
 /*---------------------------------------------------------------------------*/
-static ilocs_wake_up_counter_t
+static ilos_wake_up_counter_t
 restore_wake_up_counter(struct secrdc_phase *phase)
 {
   rtimer_clock_t diff;
   uint32_t div;
   uint32_t mod;
-  ilocs_wake_up_counter_t count;
+  ilos_wake_up_counter_t count;
 
   diff = secrdc_get_last_wake_up_time() - phase->t;
   div = diff >> SECRDC_WAKEUP_INTERVAL_BITS;
@@ -115,13 +115,13 @@ restore_wake_up_counter(struct secrdc_phase *phase)
 
   return count;
 }
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
-ilocs_wake_up_counter_t 
+ilos_wake_up_counter_t 
 restore_anycast_wakeup_counter(struct secrdc_phase *phase)
 {
-  static ilocs_wake_up_counter_t count;
+  static ilos_wake_up_counter_t count;
   /* no phase is passed, this is because we are creating an ACK */
   if(!phase) {
     return count;
@@ -160,29 +160,27 @@ restore_anycast_wakeup_counter(struct secrdc_phase *phase)
 /*---------------------------------------------------------------------------*/
 void
 ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 , struct secrdc_phase *phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 )
 {
   const linkaddr_t *source_addr;
 #if SECRDC_WITH_SECURE_PHASE_LOCK
   uint8_t *hdrptr;
-#if ILOCS_ENABLED
-  ilocs_wake_up_counter_t count;
-#endif /* ILOCS_ENABLED */
+#if ILOS_ENABLED
+  ilos_wake_up_counter_t count;
+#endif /* ILOS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
   
   source_addr = forward ? &linkaddr_node_addr : packetbuf_addr(PACKETBUF_ADDR_SENDER);
   /* set ID_A of the nonce to be the source address */
   memcpy(nonce, get_extended_address(source_addr), 8);
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   hdrptr = packetbuf_hdrptr();
-  /* set the strobe index, if this frame type uses a strobe index */
   nonce[8] = potr_has_strobe_index(hdrptr[0]) ? hdrptr[POTR_HEADER_LEN] : 0;
   if(potr_is_helloack() || potr_is_ack()) {
-    count = ilocs_parse_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1);
-    /* alpha = 0 doesn't need to be encoded */
+    count = ilos_parse_wake_up_counter(((uint8_t *)packetbuf_dataptr()) + 1);
   } else if(packetbuf_holds_broadcast()) {
     count = forward
         ? secrdc_get_wake_up_counter(secrdc_get_next_strobe_start() + SECRDC_WAKEUP_INTERVAL)
@@ -206,10 +204,9 @@ ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
     count = forward
         ? ccm_star_packetbuf_predict_wake_up_counter(phase)
         : secrdc_get_wake_up_counter(secrdc_get_last_wake_up_time());
-    /* store alpha = 1 together with wake-up counter */
     count.u32 += 0x40000000;
   }
-  ilocs_write_wake_up_counter(nonce + 9, count);
+  ilos_write_wake_up_counter(nonce + 9, count);
 #elif LLSEC802154_USES_FRAME_COUNTER
 #if SECRDC_WITH_SECURE_PHASE_LOCK
   hdrptr = packetbuf_hdrptr();
@@ -225,17 +222,17 @@ ccm_star_packetbuf_set_nonce(uint8_t *nonce, int forward
 #else /* LLSEC802154_USES_AUX_HEADER */
   nonce[12] = packetbuf_holds_broadcast() ? 0xFF : packetbuf_attr(PACKETBUF_ATTR_NEIGHBOR_INDEX);
 #endif /* LLSEC802154_USES_AUX_HEADER */
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 }
 /*---------------------------------------------------------------------------*/
 void
 ccm_star_packetbuf_to_acknowledgement_nonce(uint8_t *nonce)
 {
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   nonce[12] |= (1 << 7);
   nonce[12] &= ~(1 << 6);
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
   nonce[12] = 0xFE;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 }
 /*---------------------------------------------------------------------------*/

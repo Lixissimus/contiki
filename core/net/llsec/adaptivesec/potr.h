@@ -44,7 +44,7 @@
 #include "net/mac/framer.h"
 #include "net/linkaddr.h"
 #include "net/llsec/llsec802154.h"
-#include "net/mac/contikimac/ilocs.h"
+#include "net/mac/contikimac/ilos.h"
 #include "net/llsec/anti-replay.h"
 
 #ifdef POTR_CONF_ENABLED
@@ -59,15 +59,15 @@
 #define POTR_OTP_LEN 3
 #endif /* POTR_CONF_OTP_LEN */
 
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 #define POTR_FRAME_COUNTER_LEN 0
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
 #if LLSEC802154_USES_AUX_HEADER
 #define POTR_FRAME_COUNTER_LEN 4
 #else /* LLSEC802154_USES_AUX_HEADER */
 #define POTR_FRAME_COUNTER_LEN 1
 #endif /* LLSEC802154_USES_AUX_HEADER */
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 
 #if POTR_CONF_WITH_ANYCAST
 #ifdef POTR_CONF_LL_ANYCAST_ADDR
@@ -108,9 +108,9 @@ typedef union {
   uint8_t u8[POTR_OTP_LEN];
 } potr_otp_t;
 
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
 extern uint8_t potr_my_broadcast_seqno;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
 extern const struct framer potr_framer;
 
 #if !ANTI_REPLAY_WITH_SUPPRESSION

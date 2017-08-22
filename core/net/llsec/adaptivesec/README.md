@@ -63,12 +63,16 @@ Finally, configure a `seeder` like so
 
 ### nullrdc
 
-When using `nullrdc`, the AUTOACK option of `nullrdc` should be disabled:
+When using `nullrdc`, acknowledgement frames should be disabled:
 ```c
 #undef NULLRDC_CONF_802154_AUTOACK
 #define NULLRDC_CONF_802154_AUTOACK 0
+#undef NULLRDC_CONF_802154_AUTOACK_HW
+#define NULLRDC_CONF_802154_AUTOACK_HW 0
+#undef NULLRDC_CONF_SEND_802154_ACK
+#define NULLRDC_CONF_SEND_802154_ACK 0
 ```
-This is because the `HELLOACK-ACK` negotiation of AKES seems too fast for the current `AUTOACK` implementation of `nullrdc`. Enabling CSMA is an alternative solution:
+This is because the `HELLOACK-ACK` negotiation of AKES seems too fast for the current implementation of `nullrdc`. Enabling CSMA is an alternative solution:
 ```c
 #undef NETSTACK_CONF_MAC
 #define NETSTACK_CONF_MAC csma_driver

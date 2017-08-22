@@ -67,9 +67,9 @@ on_frame_created(void)
   uint8_t sec_lvl;
   struct akes_nbr_entry *entry;
   uint8_t *key;
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
   struct secrdc_phase *phase;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
   uint8_t datalen;
 
   sec_lvl = adaptivesec_get_sec_lvl();
@@ -80,11 +80,11 @@ on_frame_created(void)
         return 0;
       }
       key = entry->tentative->tentative_pairwise_key;
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       phase = NULL;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     } else {
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       key = packetbuf_holds_broadcast()
 #if POTR_CONF_WITH_ANYCAST      
           || packetbuf_holds_anycast()
@@ -94,17 +94,17 @@ on_frame_created(void)
       phase = (entry && entry->permanent)
           ? &entry->permanent->phase
           : NULL;
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
       key = adaptivesec_group_key;
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     }
 
     datalen = packetbuf_datalen();
 #if SECRDC_WITH_SECURE_PHASE_LOCK
     secrdc_cache_unsecured_frame(key
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
         , phase
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     );
 #else /* SECRDC_WITH_SECURE_PHASE_LOCK */
     adaptivesec_aead(key, sec_lvl & (1 << 2), ((uint8_t *)packetbuf_dataptr()) + datalen, 1);
@@ -123,14 +123,14 @@ verify(struct akes_nbr *sender)
   }
 #endif /* ANTI_REPLAY_WITH_SUPPRESSION */
   if(adaptivesec_verify(
-#if ILOCS_ENABLED
+#if ILOS_ENABLED
       packetbuf_holds_broadcast()
           ? sender->group_key
           : adaptivesec_group_key,
       &sender->phase)) {
-#else /* ILOCS_ENABLED */
+#else /* ILOS_ENABLED */
       sender->group_key)) {
-#endif /* ILOCS_ENABLED */
+#endif /* ILOS_ENABLED */
     PRINTF("noncoresec-strategy: Inauthentic frame\n");
     return ADAPTIVESEC_VERIFY_INAUTHENTIC;
   }

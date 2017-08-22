@@ -38,70 +38,48 @@
  */
 
 #include "lib/leaky-bucket.h"
+#include "sys/clock.h"
 #include "sys/cc.h"
-#include <string.h>
-
-#define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#else /* DEBUG */
-#define PRINTF(...)
-#endif /* DEBUG */
 
 /*---------------------------------------------------------------------------*/
 static void
-leak(void *ptr)
+update_filling_level(struct leaky_bucket *lb)
 {
-  struct leaky_bucket *lb;
+  uint16_t leaked_drops;
 
-  lb = (struct leaky_bucket *) ptr;
-  lb->filling_level--;
+  leaked_drops = (clock_seconds() - lb->last_update_timestamp)
+      / lb->leakage_duration;
+  lb->last_update_timestamp += leaked_drops * lb->leakage_duration;
 
-  PRINTF("leaky-bucket#leak: (%p) filling_level = %i\n",
-      lb, lb->filling_level);
-
-  if(lb->filling_level) {
-    ctimer_reset(&lb->leakage_timer);
+  if(leaked_drops >= lb->filling_level) {
+    lb->filling_level = 0;
+  } else {
+    lb->filling_level -= leaked_drops;
   }
 }
 /*---------------------------------------------------------------------------*/
 void
 leaky_bucket_init(struct leaky_bucket *lb,
     uint16_t capacity,
-    clock_time_t leakage_duration)
+    uint16_t leakage_duration)
 {
-  PRINTF("leaky-bucket#init: (%p) capacity = %i; leakage_duration = %lus\n",
-      lb, capacity, leakage_duration / CLOCK_SECOND);
-  memset(lb, 0, sizeof(struct leaky_bucket));
   lb->capacity = capacity;
   lb->leakage_duration = leakage_duration;
+  lb->filling_level = 0;
+  lb->last_update_timestamp = clock_seconds();
 }
 /*---------------------------------------------------------------------------*/
 void
-leaky_bucket_pour(struct leaky_bucket *lb, uint16_t drop_size)
+leaky_bucket_pour(struct leaky_bucket *lb)
 {
-  lb->filling_level = MIN(lb->filling_level + drop_size, lb->capacity);
-
-  PRINTF("leaky-bucket#pour: (%p) filling_level = %i\n",
-      lb, lb->filling_level);
-
-  if(!ctimer_expired(&lb->leakage_timer)) {
-    /* already scheduled */
-    return;
-  }
-
-  if(!lb->filling_level) {
-    /* nothing to leak */
-    return;
-  }
-
-  ctimer_set(&lb->leakage_timer, lb->leakage_duration, leak, lb);
+  update_filling_level(lb);
+  lb->filling_level = MIN(lb->filling_level + 1, lb->capacity);
 }
 /*---------------------------------------------------------------------------*/
 int
 leaky_bucket_is_full(struct leaky_bucket *lb)
 {
+  update_filling_level(lb);
   return lb->filling_level == lb->capacity;
 }
 /*---------------------------------------------------------------------------*/
