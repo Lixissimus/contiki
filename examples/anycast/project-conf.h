@@ -33,11 +33,11 @@
 #ifndef PROJECT_ANYCAST_CONF_H_
 #define PROJECT_ANYCAST_CONF_H_
 
-#if 1
+#if 0
 #define DEBUG_CONF
 #endif
 
-#define MAIN_DEBUG_CONF 1
+#define MAIN_DEBUG_CONF 0
 
 #if 0
 /* enable the software implementation of AES-128 */

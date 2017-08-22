@@ -1,12 +1,14 @@
 CONTIKI_PROJECT = anycast
 all: $(CONTIKI_PROJECT)
 
-DEBUG_CONF=1
+# DEBUG_CONF=1
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 MODULES += core/net/llsec/adaptivesec
 MODULES += core/net/orpl
 MODULES += apps/servreg-hack
+
+CONTIKI_SOURCEFILES += lladdr-id-mapping.c
 
 CONTIKI = ../..
 CONTIKI_WITH_IPV6 = 1

@@ -52,6 +52,8 @@
 
 #include "lib/random.h"
 
+#include "lladdr-id-mapping.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
@@ -62,7 +64,7 @@
 #define ROOT_ID 1
 
 #define DEBUG 1
-#define PERIODIC_SEND 1
+#define PERIODIC_SEND 0
 
 static struct ctimer off_timer;
 
@@ -107,6 +109,23 @@ AUTOSTART_PROCESSES(&anycast_process);
 static int receiver_indcator_on;
 
 static void
+print_local_addresses(void) {
+  int i;
+  uint8_t state;
+
+  printf("Own IPv6 addresses:\n");
+  for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
+    state = uip_ds6_if.addr_list[i].state;
+    if(uip_ds6_if.addr_list[i].isused &&
+       (state == ADDR_TENTATIVE || state == ADDR_PREFERRED)) {
+      printf(" ");
+      uip_debug_ipaddr_print(&uip_ds6_if.addr_list[i].ipaddr);
+      printf("\n");
+    }
+  }
+}
+
+static void
 leds_turn_off(void *d)
 {
   leds_off(LEDS_ALL);
@@ -123,7 +142,8 @@ receiver(struct simple_udp_connection *c,
          uint16_t datalen)
 {
   uint16_t sender_id;
-  sender_id = (sender_addr->u8[14] << 8) + sender_addr->u8[15];
+  // sender_id = (sender_addr->u8[14] << 8) + sender_addr->u8[15];
+  sender_id = lladdr_id_mapping_id_from_ipv6(sender_addr);
   printf("Data received on port %d from port %d from %" PRIu16 " with length %d: %s\n",
          receiver_port, sender_port, sender_id, datalen, data);
   
@@ -172,9 +192,14 @@ PROCESS_THREAD(anycast_process, ev, data)
   /* setup addresses */
   static uint16_t own_id;
   uip_ipaddr_t ipaddr;
-  own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
-  ip_from_id(&ipaddr, own_id);
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
+  // own_id = (linkaddr_node_addr.u8[LINKADDR_SIZE-2] << 8) + linkaddr_node_addr.u8[LINKADDR_SIZE-1];
+  // ip_from_id(&ipaddr, own_id);
+  // uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
+
+  own_id = lladdr_id_mapping_id_from_ll(&linkaddr_node_addr);
+  printf("Own id: %" PRIu16 "\n", own_id);
+
+  print_local_addresses();
 
 #if !PERIODIC_SEND
   SENSORS_ACTIVATE(button_sensor);
@@ -251,8 +276,11 @@ PROCESS_THREAD(anycast_process, ev, data)
       /* Only traffic to root */
       dest_id = ROOT_ID;
 
-      ip_from_id(&addr, dest_id);
+      // ip_from_id(&addr, dest_id);
+      lladdr_id_mapping_ipv6_from_id(dest_id, &addr);
       printf("Sending anycast from %d to %d: %d/%" PRIu32 "\n", own_id, dest_id, msg_idx, packets_expected);
+      uip_debug_ipaddr_print(&addr);
+      printf("\n");
       sprintf(buf, "Message %d", msg_idx);
       simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
     }

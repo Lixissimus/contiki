@@ -1232,8 +1232,10 @@ uip_process(uint8_t flag)
       goto process;
     case ORPL_ROUTE_UP:
       /* Not for us, continue routing */
-      dst_id = (UIP_IP_BUF->destipaddr.u8[14] << 8) + UIP_IP_BUF->destipaddr.u8[15];
-      printf("route packet towards %d\n", dst_id);
+      /* Todo: fix finding id! */
+      // dst_id = (UIP_IP_BUF->destipaddr.u8[14] << 8) + UIP_IP_BUF->destipaddr.u8[15];
+      // dst_id = lladdr_id_mapping_id_from_ipv6(&UIP_IP_BUF->destipaddr)
+      // printf("route packet towards %d\n", dst_id);
       goto send;
       break;
     case ORPL_ROUTE_DOWN:
