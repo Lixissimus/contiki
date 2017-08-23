@@ -120,7 +120,11 @@ orpl_should_receive()
 
   rpl_rank_t src_rank = rpl_get_parent_rank((uip_lladdr_t *) &addr);
 
-  /* check if routing upwards by checking anycast type */
+  /* Dont accept packets from nodes with infinite rank */
+  if(src_rank == 0xffff) {
+    return ORPL_ROUTE_REJECT;
+  }
+  /* Todo: check if routing upwards by checking anycast type */
   if(1) {
     /* Todo: Enforce some minimal routing progress here */
     if(src_rank > orpl_current_edc()) {

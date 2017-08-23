@@ -47,7 +47,7 @@ struct id_linkaddr {
 
 static const struct id_linkaddr id_linkaddr_list[] = {
   /* wall network */
-#if 0
+#if 1
   { 1, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0x2b}} },
   { 2, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0x29}} },
   { 3, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x52,0xe8}} },
@@ -120,6 +120,21 @@ lladdr_id_mapping_ipv6_from_id(const uint16_t id, uip_ipaddr_t *ipaddr)
       uip_ip6addr(ipaddr, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
       uip_ds6_set_addr_iid(ipaddr, &uip_lladdr);
       uip_ds6_set_addr_iid(ipaddr, (uip_lladdr_t*) &id_linkaddr_list[i].addr);
+      return 1;
+    }
+  }
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
+int
+lladdr_id_mapping_ll_from_ipv6(const uip_ipaddr_t *ipaddr, linkaddr_t *lladdr)
+{
+  uint16_t i;
+  for(i = 0; i < (sizeof(id_linkaddr_list) / sizeof(struct id_linkaddr)); ++i) {
+    if( id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-2] == ipaddr->u8[14] && 
+        id_linkaddr_list[i].addr.u8[LINKADDR_SIZE-1] == ipaddr->u8[15])
+    {
+      memcpy(lladdr, &id_linkaddr_list[i].addr, LINKADDR_SIZE);
       return 1;
     }
   }

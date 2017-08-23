@@ -43,7 +43,7 @@
 
 #include "led-debug.h"
 
-#define TIME (CLOCK_SECOND / 2)
+#define TIME (2*CLOCK_SECOND / 1)
 
 static struct ctimer red_timer;
 static struct ctimer yellow_timer;

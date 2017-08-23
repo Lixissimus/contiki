@@ -57,9 +57,16 @@
 #include <stdio.h>
 #endif
 
+/* Todo: Flag for deployment options */
+#define TEST_DEPLOYMENT 1
+#if TEST_DEPLOYMENT
+#include "lib/lladdr-id-mapping.h"
+#include "net/llsec/adaptivesec/akes-nbr.h"
+#endif
+
 #include <string.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #include "net/ip/uip-debug.h"
 
 #if UIP_LOGGING
@@ -585,13 +592,27 @@ tcpip_ipv6_output(void)
     }
 #if ORPL_ENABLED
     else {
-      /* We do anycast routing */
-      PRINTF("tcpip: anycast routing\n");
-      uip_lladdr_t anycast_ll_addr;
-      potr_create_ll_anycast_addr((linkaddr_t *)&anycast_ll_addr);
-      tcpip_output(&anycast_ll_addr);
-      uip_clear_buf();
-      return;
+#if TEST_DEPLOYMENT
+      linkaddr_t dest_lladdr;
+      if( lladdr_id_mapping_ll_from_ipv6(&UIP_IP_BUF->destipaddr, &dest_lladdr) &&
+          akes_nbr_get_entry(&dest_lladdr))
+      {
+        /* destination is immediate neighbor, no routing required */
+        PRINTF("tcpip: immediate neighbor\n");
+        tcpip_output((uip_lladdr_t *) &dest_lladdr);
+        uip_clear_buf();
+        return;
+      } else
+#endif /* TEST_DEPLOYMENT */
+      {
+        /* We do anycast routing */
+        PRINTF("tcpip: anycast routing\n");
+        uip_lladdr_t anycast_ll_addr;
+        potr_create_ll_anycast_addr((linkaddr_t *)&anycast_ll_addr);
+        tcpip_output(&anycast_ll_addr);
+        uip_clear_buf();
+        return;
+      }
     }
 #endif /* ORPL_ENABLED */
 
