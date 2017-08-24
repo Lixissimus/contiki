@@ -84,7 +84,7 @@ static struct ctimer nbr_timer;
 
 /* experiment setup */
 #define STARTUP_DELAY (5*CLOCK_SECOND)
-#define EXP_RUNTIME (10*60*CLOCK_SECOND)
+#define EXP_RUNTIME (40*60*CLOCK_SECOND)
 #define SHUTDOWN_DELAY (1*CLOCK_SECOND)
 
 #define MEASURE_DELIVERY_RATIO 1
@@ -147,12 +147,20 @@ receiver(struct simple_udp_connection *c,
 /*---------------------------------------------------------------------------*/
 #if DEBUG
 static void
-check_nbr_status(void *d)
+check_status(void *d)
 {
+  /* red indicates no akes neighbors */
   if(akes_nbr_count(AKES_NBR_PERMANENT) > 0) {
     leds_off(LEDS_RED);
   } else {
     leds_on(LEDS_RED);
+  }
+
+  /* yellow indicates not part of DODAG */
+  if(orpl_current_edc() < 0xffff) {
+    leds_off(LEDS_YELLOW);
+  } else {
+    leds_on(LEDS_YELLOW);
   }
 
   ctimer_restart(&nbr_timer);
@@ -208,7 +216,7 @@ PROCESS_THREAD(anycast_process, ev, data)
   }
 
 #if DEBUG
-  ctimer_set(&nbr_timer, CLOCK_SECOND, check_nbr_status, NULL);
+  ctimer_set(&nbr_timer, CLOCK_SECOND, check_status, NULL);
 #endif
 
 #if PERIODIC_SEND
@@ -257,11 +265,11 @@ PROCESS_THREAD(anycast_process, ev, data)
       uip_ipaddr_t addr;
       uint16_t dest_id;
 
-      if(orpl_current_edc() == 0xffff) {
-        printf("Node is not in DODAG\n");
-        continue;
-      } else if(akes_nbr_count(AKES_NBR_PERMANENT) <= 0) {
+      if(akes_nbr_count(AKES_NBR_PERMANENT) <= 0) {
         printf("Node has no akes neighbors\n");
+        continue;
+      } else if(orpl_current_edc() == 0xffff) {
+        printf("Node is not in DODAG\n");
         continue;
       } else {
         printf("current edc: %d\n", orpl_current_edc());
