@@ -50,6 +50,7 @@
 #include "net/llsec/ccm-star-packetbuf.h"
 #include "net/mac/contikimac/secrdc.h"
 #include <string.h>
+#include <inttypes.h>
 
 #ifdef POTR_CONF_KEY
 #define POTR_KEY POTR_CONF_KEY
@@ -88,6 +89,10 @@
 #else /* DEBUG */
 #define PRINTF(...)
 #endif /* DEBUG */
+
+#if NETWORK_HARDCODED
+#include "lib/lladdr-id-mapping.h"
+#endif /* NETWORK_HARDCODED */
 
 #if POTR_ENABLED
 static void read_otp(void);
@@ -617,6 +622,15 @@ potr_parse_and_validate(void)
 
   /* Source Address */
   memcpy(addr.u8, p, LINKADDR_SIZE);
+#if NETWORK_HARDCODED
+  uint16_t own_id = lladdr_id_mapping_own_id();
+  uint16_t src_id = lladdr_id_mapping_id_from_ll(&addr);
+  if(!lladdr_id_mapping_are_nbrs(own_id, src_id)) {
+    PRINTF("reject because not a neighbor (%" PRIu16 " - %" PRIu16 ")\n",
+        own_id, src_id);
+    return FRAMER_FAILED;
+  }
+#endif /* NETWORK_HARDCODED */
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER, &addr);
   entry = akes_nbr_get_sender_entry();
 #if ILOS_ENABLED

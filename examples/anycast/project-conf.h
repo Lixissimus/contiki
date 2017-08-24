@@ -39,6 +39,8 @@
 
 #define MAIN_DEBUG_CONF 0
 
+#define NETWORK_HARDCODED 1
+
 #if 0
 /* enable the software implementation of AES-128 */
 #undef AES_128_CONF

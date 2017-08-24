@@ -70,7 +70,8 @@
 
 #define SEND_INTERVAL (60*CLOCK_SECOND)
 #define RANDOM_FRACTION (60*CLOCK_SECOND)
-#define RANDOM_INTERVAL (SEND_INTERVAL - (RANDOM_FRACTION/2) + (random_rand() % RANDOM_FRACTION))
+#define RANDOM_INTERVAL (SEND_INTERVAL - (RANDOM_FRACTION/2) \
+                        + (random_rand() % RANDOM_FRACTION))
 
 #if PERIODIC_SEND
 static struct etimer periodic_timer;
@@ -83,7 +84,7 @@ static struct ctimer nbr_timer;
 
 /* experiment setup */
 #define STARTUP_DELAY (5*CLOCK_SECOND)
-#define EXP_RUNTIME (5*60*CLOCK_SECOND)
+#define EXP_RUNTIME (10*60*CLOCK_SECOND)
 #define SHUTDOWN_DELAY (1*CLOCK_SECOND)
 
 #define MEASURE_DELIVERY_RATIO 1
@@ -128,8 +129,10 @@ receiver(struct simple_udp_connection *c,
 {
   uint16_t sender_id;
   sender_id = lladdr_id_mapping_id_from_ipv6(sender_addr);
-  printf("Data received on port %d from port %d from %" PRIu16 " with length %d: %s\n",
-         receiver_port, sender_port, sender_id, datalen, data);
+  printf("Data received on port %d from port %d from %" PRIu16 
+      " with length %d: %s\n",
+      receiver_port, sender_port, sender_id, datalen, data
+  );
   uint32_t msg_number = atoi((const char*)data);
   if(msg_number <= last_received[sender_id-1]) {
     /* duplicate */
@@ -171,7 +174,7 @@ PROCESS_THREAD(anycast_process, ev, data)
 
   /* setup addresses */
   static uint16_t own_id;
-  own_id = lladdr_id_mapping_id_from_ll(&linkaddr_node_addr);
+  own_id = lladdr_id_mapping_own_id();
   printf("Own id: %" PRIu16 "\n", own_id);
   
   uip_ipaddr_t ipaddr;
@@ -218,19 +221,21 @@ PROCESS_THREAD(anycast_process, ev, data)
 
   while(1) {
 #if PERIODIC_SEND
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
-    etimer_set(&periodic_timer, RANDOM_INTERVAL);
 #if MEASURE_DELIVERY_RATIO
     if(msg_idx >= packets_expected) {
       break;
     }
 #endif
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+    etimer_set(&periodic_timer, RANDOM_INTERVAL);
     if(own_id == ROOT_ID) {
       // msg_idx++;
 #if MEASURE_DELIVERY_RATIO
       printf("delivery ratios:\n");
       for(i = 0; i < NETWORK_SIZE; ++i) {
-        printf("Node %" PRIu8 ": %" PRIu32 "/%" PRIu32 "\n", i+1, packets_received[i], packets_expected);
+        printf("Node %" PRIu8 ": %" PRIu32 "/%" PRIu32 "\n",
+            i+1, packets_received[i], packets_expected
+        );
       }
       printf("\n");
       printf("duplicates:\n");
@@ -244,7 +249,8 @@ PROCESS_THREAD(anycast_process, ev, data)
     PROCESS_WAIT_EVENT();
     if( ev == sensors_event &&
         data == &button_sensor &&
-        button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) == BUTTON_SENSOR_PRESSED_LEVEL)
+        button_sensor.value(BUTTON_SENSOR_VALUE_TYPE_LEVEL) ==
+            BUTTON_SENSOR_PRESSED_LEVEL)
 #endif /* PERIODIC_SEND */
     {
       char buf[127];
@@ -272,12 +278,10 @@ PROCESS_THREAD(anycast_process, ev, data)
 
       // ip_from_id(&addr, dest_id);
       lladdr_id_mapping_ipv6_from_id(dest_id, &addr);
-      printf("Sending anycast from %d to %d: %" PRIu32 "/%" PRIu32 "\n", own_id, dest_id, msg_idx, packets_expected);
-      // if(uip_ds6_is_addr_onlink(&addr)) {
-      //   printf("(on-link)\n");
-      // } else {
-      //   printf("(multi-hop)\n");
-      // }
+      printf("Sending anycast from %d to %d: %" PRIu32 "/%" PRIu32 "\n", 
+          own_id, dest_id, msg_idx, packets_expected
+      );
+      
       uip_debug_ipaddr_print(&addr);
       printf("\n");
       sprintf(buf, "%" PRIu32, msg_idx);
@@ -285,6 +289,10 @@ PROCESS_THREAD(anycast_process, ev, data)
       simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
     }
   }
+  
+  /* indicate that we're done */
+  leds_on(LEDS_GREEN);
+
 #if PERIODIC_SEND
   etimer_set(&delay_timer, SHUTDOWN_DELAY);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&delay_timer));
@@ -293,7 +301,9 @@ PROCESS_THREAD(anycast_process, ev, data)
 #if MEASURE_DELIVERY_RATIO
   printf("delivery ratios:\n");
   for(i = 0; i < NETWORK_SIZE; ++i) {
-    printf("Node %" PRIu8 ": %" PRIu32 "/%" PRIu32 "\n", i+1, packets_received[i], packets_expected);
+    printf("Node %" PRIu8 ": %" PRIu32 "/%" PRIu32 "\n",
+        i+1, packets_received[i], packets_expected
+    );
   }
   printf("\n");
   printf("duplicates:\n");
@@ -302,8 +312,6 @@ PROCESS_THREAD(anycast_process, ev, data)
   }
 #endif
 
-  /* indicate that we're done */
-  leds_on(LEDS_GREEN);
   
   PROCESS_END();
 }

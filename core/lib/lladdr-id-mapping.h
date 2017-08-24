@@ -43,10 +43,12 @@
 #include "net/linkaddr.h"
 #include "net/ip/uip.h"
 
+uint16_t lladdr_id_mapping_own_id(void);
 uint16_t lladdr_id_mapping_id_from_ll(const linkaddr_t *addr);
 int lladdr_id_mapping_ll_from_id(const uint16_t id, linkaddr_t *addr);
 uint16_t lladdr_id_mapping_id_from_ipv6(const uip_ipaddr_t *ip_addr);
 int lladdr_id_mapping_ipv6_from_id(const uint16_t id, uip_ipaddr_t *ip_addr);
 int lladdr_id_mapping_ll_from_ipv6(const uip_ipaddr_t *ipaddr, linkaddr_t *lladdr);
+int lladdr_id_mapping_are_nbrs(const uint16_t id1, const uint16_t id2);
 
 #endif /* LLADDR_ID_MAPPING_H_ */

@@ -37,8 +37,22 @@
  *         Felix Wolff <lixissimus@gmail.com>
  */
 
-#include "lladdr-id-mapping.h"
+#include "net/linkaddr.h"
 #include "net/ipv6/uip-ds6.h"
+
+#include "lladdr-id-mapping.h"
+
+/* some hardcoded network setup */
+static const uint8_t nbrs[8][8] = {
+  { 1, 1, 0, 0, 1, 0, 0, 0 },
+  { 1, 1, 1, 0, 0, 1, 0, 0 },
+  { 0, 1, 1, 1, 0, 0, 1, 0 },
+  { 0, 0, 1, 1, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 1, 1, 0, 0 },
+  { 0, 1, 0, 0, 1, 1, 1, 0 },
+  { 0, 0, 1, 0, 0, 1, 1, 1 },
+  { 0, 0, 0, 1, 0, 0, 1, 1 }
+};
 
 struct id_linkaddr {
   uint16_t id;
@@ -70,6 +84,17 @@ static const struct id_linkaddr id_linkaddr_list[] = {
 };
 
 static const uint16_t ip_prefix[] = { 0xfe80, 0, 0, 0, 0x212, 0x4b00, 0x430, 0 };
+/*---------------------------------------------------------------------------*/
+uint16_t
+lladdr_id_mapping_own_id(void)
+{
+  static uint16_t own_id = 0;
+  if(own_id) {
+    return own_id;
+  }
+  own_id = lladdr_id_mapping_id_from_ll(&linkaddr_node_addr);
+  return own_id;
+}
 /*---------------------------------------------------------------------------*/
 uint16_t
 lladdr_id_mapping_id_from_ll(const linkaddr_t *addr)
@@ -139,4 +164,10 @@ lladdr_id_mapping_ll_from_ipv6(const uip_ipaddr_t *ipaddr, linkaddr_t *lladdr)
     }
   }
   return 0;
+}
+/*---------------------------------------------------------------------------*/
+int
+lladdr_id_mapping_are_nbrs(const uint16_t id1, const uint16_t id2)
+{
+  return nbrs[id1-1][id2-1];
 }
