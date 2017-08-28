@@ -43,6 +43,8 @@
 #include "contiki.h"
 #include "dev/radio.h"
 
+#define TRACE 1
+
 #ifdef RADIO_ASYNC_CONF_WITH_CHECKSUM
 #define RADIO_ASYNC_WITH_CHECKSUM RADIO_ASYNC_CONF_WITH_CHECKSUM
 #else /* RADIO_ASYNC_CONF_WITH_CHECKSUM */
@@ -54,6 +56,17 @@
 #else /* RADIO_ASYNC_WITH_CHECKSUM */
 #define RADIO_ASYNC_CHECKSUM_LEN 0
 #endif /* RADIO_ASYNC_WITH_CHECKSUM */
+
+#if TRACE
+struct duty_cycle_stats {
+  rtimer_clock_t time_on;
+  rtimer_clock_t time_total;
+};
+
+void radio_async_set_tracing(int mode);
+int radio_async_is_tracing(void);
+void radio_async_get_stats(struct duty_cycle_stats *stats);
+#endif
 
 struct radio_async_driver {
   void (* init)(void);

@@ -67,6 +67,15 @@
 #define PRINTF(...)
 #endif
 
+#if TRACE
+// static rtimer_clock_t time_spent_in_rx;
+// static rtimer_clock_t time_spent_in_tx;
+static int is_tracing;
+static rtimer_clock_t time_start;
+static rtimer_clock_t time_init;
+static rtimer_clock_t time_on;
+#endif
+
 static int pending_packet(void);
 static void on(void);
 static void off(void);
@@ -79,6 +88,32 @@ static volatile radio_sfd_callback_t sfd_callback;
 static volatile radio_fifop_callback_t fifop_callback;
 static volatile radio_txdone_callback_t txdone_callback;
 
+/*---------------------------------------------------------------------------*/
+#if TRACE
+void
+radio_async_set_tracing(int mode)
+{
+  if(is_tracing) {
+    return;
+  }
+  is_tracing = 1;
+  time_init = RTIMER_NOW();
+  time_on = 0;
+}
+/*---------------------------------------------------------------------------*/
+int
+radio_async_is_tracing(void)
+{
+  return is_tracing;
+}
+/*---------------------------------------------------------------------------*/
+void
+radio_async_get_stats(struct duty_cycle_stats *stats)
+{
+  stats->time_on = time_on;
+  stats->time_total = RTIMER_NOW() - time_init;
+}
+#endif
 /*---------------------------------------------------------------------------*/
 static void
 flushrx(void)
@@ -337,7 +372,11 @@ on(void)
     PRINTF("cc2538-rf-async: already on\n");
     return;
   }
-
+#if TRACE
+  if(is_tracing && time_start == 0) {
+    time_start = RTIMER_NOW();
+  }
+#endif
   CC2538_RF_CSP_ISRXON();
   in_rx_mode = 1;
 }
@@ -349,6 +388,12 @@ off(void)
     PRINTF("cc2538-rf-async: already off\n");
     return;
   }
+#if TRACE
+  if(is_tracing && time_start > 0) {
+    time_on += RTIMER_NOW() - time_start;
+    time_start = 0;
+  }
+#endif
 
   CC2538_RF_CSP_ISRFOFF();
   in_rx_mode = 0;
