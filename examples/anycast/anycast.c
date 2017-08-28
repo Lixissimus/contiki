@@ -88,11 +88,17 @@ static struct ctimer nbr_timer;
 #define SHUTDOWN_DELAY (1*CLOCK_SECOND)
 
 #define MEASURE_DELIVERY_RATIO 1
+#define MEASURE_ENERGY_CONSUMPTION 1
+
 #if MEASURE_DELIVERY_RATIO
 static uint32_t packets_received[NETWORK_SIZE];
 static uint32_t last_received[NETWORK_SIZE];
 static uint32_t duplicates_received[NETWORK_SIZE];
 static uint32_t packets_expected = EXP_RUNTIME / SEND_INTERVAL;
+#endif
+
+#if MEASURE_ENERGY_CONSUMPTION
+#include "dev/radio-async.h"
 #endif
 
 /*---------------------------------------------------------------------------*/
@@ -129,10 +135,7 @@ receiver(struct simple_udp_connection *c,
 {
   uint16_t sender_id;
   sender_id = lladdr_id_mapping_id_from_ipv6(sender_addr);
-  printf("Data received on port %d from port %d from %" PRIu16 
-      " with length %d: %s\n",
-      receiver_port, sender_port, sender_id, datalen, data
-  );
+  printf("Received from %" PRIu16 ": %s\n", sender_id, data);
   uint32_t msg_number = atoi((const char*)data);
   if(msg_number <= last_received[sender_id-1]) {
     /* duplicate */
@@ -152,6 +155,10 @@ check_status(void *d)
   /* red indicates no akes neighbors */
   if(akes_nbr_count(AKES_NBR_PERMANENT) > 0) {
     leds_off(LEDS_RED);
+#if MEASURE_ENERGY_CONSUMPTION
+    /* init phase is done, start tracing */
+    radio_async_set_tracing(1);
+#endif
   } else {
     leds_on(LEDS_RED);
   }
@@ -166,8 +173,40 @@ check_status(void *d)
   ctimer_restart(&nbr_timer);
 }
 #endif
-
-
+/*---------------------------------------------------------------------------*/
+static void
+print_metrics(void)
+{
+  uint8_t i;
+  uint16_t own_id = lladdr_id_mapping_own_id();
+  printf("Metrics of Node %" PRIu16 ":\n", own_id);
+#if MEASURE_DELIVERY_RATIO
+  if(own_id == ROOT_ID) {
+    printf("Delivery Ratios:\n");
+    for(i = 0; i < NETWORK_SIZE; ++i) {
+      printf("Node %" PRIu8 ": %" PRIu32 "/%" PRIu32 "\n",
+          i+1, packets_received[i], packets_expected
+      );
+    }
+    printf("\n");
+    printf("Duplicates:\n");
+    for(i = 0; i < NETWORK_SIZE; ++i) {
+      printf("Node %" PRIu8 ": %" PRIu32 "\n", i+1, duplicates_received[i]);
+    }
+  }
+#endif
+#if MEASURE_ENERGY_CONSUMPTION
+  if(radio_async_is_tracing()) {
+    struct duty_cycle_stats stats;
+    radio_async_get_stats(&stats);
+    printf("Radio on: ");
+    printf("%" PRIu32 "/%" PRIu32 " (%" PRIu32 ".%" PRIu32 "%%)\n",
+        stats.time_on, stats.time_total, stats.time_on * 100 / stats.time_total,
+        ((stats.time_on * 100) % stats.time_total) * 1000 / stats.time_total
+    );
+  }
+#endif
+}
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(anycast_process, ev, data)
 {
@@ -236,21 +275,8 @@ PROCESS_THREAD(anycast_process, ev, data)
 #endif
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, RANDOM_INTERVAL);
+    print_metrics();
     if(own_id == ROOT_ID) {
-      // msg_idx++;
-#if MEASURE_DELIVERY_RATIO
-      printf("delivery ratios:\n");
-      for(i = 0; i < NETWORK_SIZE; ++i) {
-        printf("Node %" PRIu8 ": %" PRIu32 "/%" PRIu32 "\n",
-            i+1, packets_received[i], packets_expected
-        );
-      }
-      printf("\n");
-      printf("duplicates:\n");
-      for(i = 0; i < NETWORK_SIZE; ++i) {
-        printf("Node %" PRIu8 ": %" PRIu32 "\n", i+1, duplicates_received[i]);
-      }
-#endif
       continue;
     }
 #else

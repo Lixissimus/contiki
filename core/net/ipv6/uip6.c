@@ -100,7 +100,7 @@
 /* For Debug, logging, statistics                                            */
 /*---------------------------------------------------------------------------*/
 
-#define LED_DEBUG 1
+#define LED_DEBUG 0
 #if LED_DEBUG
 #include "lib/led-debug.h"
 #endif
@@ -1232,13 +1232,13 @@ uip_process(uint8_t flag)
     switch(orpl_make_routing_decision(&UIP_IP_BUF->destipaddr)) {
     case ORPL_ROUTE_KEEP:
       /* This packet is for us, deliver up the stack */
-      printf("keep packet\n");
+      PRINTF("keep packet\n");
       goto process;
     case ORPL_ROUTE_UP:
       /* Not for us, continue routing */
-      printf("route packet\n");
+      PRINTF("route packet\n");
 #if LED_DEBUG
-      led_debug_set_yellow();
+      led_debug_set_green();
 #endif
       goto send;
       break;
