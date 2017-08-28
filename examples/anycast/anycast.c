@@ -202,7 +202,7 @@ print_metrics(void)
     printf("Radio on: ");
     printf("%" PRIu32 "/%" PRIu32 " (%" PRIu32 ".%" PRIu32 "%%)\n",
         stats.time_on, stats.time_total, stats.time_on * 100 / stats.time_total,
-        ((stats.time_on * 100) % stats.time_total) * 1000 / stats.time_total
+        (stats.time_on * 100 % stats.time_total) * 10 / stats.time_total
     );
   }
 #endif
@@ -234,6 +234,7 @@ PROCESS_THREAD(anycast_process, ev, data)
 #endif
 
   /* setup routing */
+#if ORPL_ENABLED
   if(own_id == ROOT_ID) {
     rpl_dag_t *dag = rpl_set_root(RPL_DEFAULT_INSTANCE, &ipaddr);
     rpl_set_prefix(dag, &ipaddr, 64);
@@ -241,6 +242,19 @@ PROCESS_THREAD(anycast_process, ev, data)
 
   /* init the ORPL module */
   orpl_init(own_id == ROOT_ID);
+#else
+  /* regular RPL routing */
+  if(own_id == ROOT_ID) {
+    rpl_dag_t *dag;
+    uip_ipaddr_t prefix;
+    
+    rpl_set_root(RPL_DEFAULT_INSTANCE, &ipaddr);
+    dag = rpl_get_any_dag();
+    uip_ip6addr(&prefix, UIP_DS6_DEFAULT_PREFIX, 0, 0, 0, 0, 0, 0, 0);
+    rpl_set_prefix(dag, &prefix, 64);
+    PRINTF("created a new RPL dag\n");
+  }
+#endif /* ORPL_ENABLED */
 
   /* register the connection */
   simple_udp_register(&anycast_connection, UDP_PORT,
@@ -312,7 +326,7 @@ PROCESS_THREAD(anycast_process, ev, data)
 
       // ip_from_id(&addr, dest_id);
       lladdr_id_mapping_ipv6_from_id(dest_id, &addr);
-      printf("Sending anycast from %d to %d: %" PRIu32 "/%" PRIu32 "\n", 
+      printf("Sending message from %d to %d: %" PRIu32 "/%" PRIu32 "\n", 
           own_id, dest_id, msg_idx, packets_expected
       );
       
