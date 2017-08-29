@@ -104,6 +104,12 @@
 
 #define WITH_COLLISION_AVOIDANCE (WITH_INTRA_COLLISION_AVOIDANCE || WITH_INTER_COLLISION_AVOIDANCE)
 
+#ifdef SECRDC_CONF_WITH_AUTO_CCA
+#define WITH_AUTO_CCA SECRDC_CONF_WITH_AUTO_CCA
+#else /* SECRDC_CONF_WITH_AUTO_CCA */
+#define WITH_AUTO_CCA 0
+#endif /* SECRDC_CONF_WITH_AUTO_CCA */
+
 #ifdef SECRDC_CONF_TXDONE_DELAY
 #define TXDONE_DELAY SECRDC_CONF_TXDONE_DELAY
 #else /* SECRDC_CONF_TXDONE_DELAY */
@@ -311,7 +317,13 @@ static union {
 } u;
 
 static int8_t rssi_of_last_transmission;
+#if WITH_AUTO_CCA
+static int8_t last_rssis[MAX_CACHED_RSSIS];
+static uint8_t last_rssi_index;
+static int8_t floor_noise_mean;
+#else /* WITH_AUTO_CCA */
 static const int8_t floor_noise_mean = INITIAL_FLOOR_NOISE;
+#endif /* WITH_AUTO_CCA */
 static struct rtimer timer;
 static rtimer_clock_t duty_cycle_next;
 static struct pt pt;
@@ -330,6 +342,30 @@ static rtimer_clock_t my_wake_up_counter_last_increment;
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
 /*---------------------------------------------------------------------------*/
+#if WITH_AUTO_CCA
+static void
+cache_rssi(int8_t rssi)
+{
+  if(++last_rssi_index == MAX_CACHED_RSSIS) {
+    last_rssi_index = 0;
+  }
+  last_rssis[last_rssi_index] = rssi;
+}
+/*---------------------------------------------------------------------------*/
+static void
+update_floor_noise(void)
+{
+  int32_t sum;
+  uint8_t i;
+
+  sum = 0;
+  for(i = 0; i < MAX_CACHED_RSSIS; i++) {
+    sum += last_rssis[i];
+  }
+  floor_noise_mean = sum / MAX_CACHED_RSSIS;
+}
+#endif /* WITH_AUTO_CCA */
+/*---------------------------------------------------------------------------*/
 static int
 channel_clear(enum cca_reason reason)
 {
@@ -339,6 +375,9 @@ channel_clear(enum cca_reason reason)
   switch(reason) {
   case TRANSMISSION_DETECTION:
     if(rssi < floor_noise_mean + SIGNAL_NOISE_DIFF) {
+#if WITH_AUTO_CCA
+      cache_rssi(rssi);
+#endif /* WITH_AUTO_CCA */
       return 1;
     } else {
       rssi_of_last_transmission = rssi;
@@ -348,6 +387,9 @@ channel_clear(enum cca_reason reason)
     return rssi <= rssi_of_last_transmission - SIGNAL_NOISE_DIFF;
 #if WITH_COLLISION_AVOIDANCE
   case COLLISION_AVOIDANCE:
+#if WITH_AUTO_CCA
+    cache_rssi(rssi);
+#endif /* WITH_AUTO_CCA */
     return rssi < floor_noise_mean + CCA_HYSTERESIS;
 #endif /* WITH_COLLISION_AVOIDANCE */
   default:
@@ -387,6 +429,10 @@ init(void)
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
   memb_init(&buffered_frames_memb);
   list_init(buffered_frames_list);
+#if WITH_AUTO_CCA
+  memset(last_rssis, INITIAL_FLOOR_NOISE, MAX_CACHED_RSSIS);
+  floor_noise_mean = INITIAL_FLOOR_NOISE;
+#endif /* WITH_AUTO_CCA */
   NETSTACK_RADIO_ASYNC.set_object(RADIO_PARAM_TXDONE_CALLBACK, on_txdone, 0);
   NETSTACK_RADIO_ASYNC.set_object(RADIO_PARAM_SFD_CALLBACK, on_sfd, 0);
   prepare_radio_for_duty_cycle();
@@ -1086,6 +1132,9 @@ PROCESS_THREAD(post_processing, ev, data)
 #endif /* LPM_CONF_ENABLE */
 
     /* prepare next duty cycle */
+#if WITH_AUTO_CCA
+    update_floor_noise();
+#endif /* WITH_AUTO_CCA */
     prepare_radio_for_duty_cycle();
     memset(&u.duty_cycle, 0, sizeof(u.duty_cycle));
     duty_cycle_next = shift_to_future(duty_cycle_next);
