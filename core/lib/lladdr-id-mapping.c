@@ -43,6 +43,7 @@
 #include "lladdr-id-mapping.h"
 
 /* some hardcoded network setup */
+#if 0
 static const uint8_t nbrs[8][8] = {
   { 1, 1, 0, 0, 1, 0, 0, 0 },
   { 1, 1, 1, 0, 0, 1, 0, 0 },
@@ -53,6 +54,18 @@ static const uint8_t nbrs[8][8] = {
   { 0, 0, 1, 0, 0, 1, 1, 1 },
   { 0, 0, 0, 1, 0, 0, 1, 1 }
 };
+#else
+static const uint8_t nbrs[8][8] = {
+  { 1, 1, 0, 0, 1, 1, 0, 0 },
+  { 1, 1, 1, 0, 1, 1, 1, 0 },
+  { 0, 1, 1, 1, 0, 1, 1, 1 },
+  { 0, 0, 1, 1, 0, 0, 1, 1 },
+  { 1, 1, 0, 0, 1, 1, 0, 0 },
+  { 1, 1, 1, 0, 1, 1, 1, 0 },
+  { 0, 1, 1, 1, 0, 1, 1, 1 },
+  { 0, 0, 1, 1, 0, 0, 1, 1 }
+};
+#endif
 
 struct id_linkaddr {
   uint16_t id;
@@ -70,7 +83,7 @@ static const struct id_linkaddr id_linkaddr_list[] = {
   { 6, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0x2f}} },
   { 7, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x54,0x03}} },
   { 8, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0x73}} }
-#elif 0
+#elif 1
   /* desk test motes uni*/
   /* with tape */
   { 1, {{0x00,0x12,0x4b,0x00,0x04,0x30,0x53,0x32}} },

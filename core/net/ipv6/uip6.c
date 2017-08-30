@@ -100,7 +100,7 @@
 /* For Debug, logging, statistics                                            */
 /*---------------------------------------------------------------------------*/
 
-#define LED_DEBUG 0
+#define LED_DEBUG 1
 #if LED_DEBUG
 #include "lib/led-debug.h"
 #endif

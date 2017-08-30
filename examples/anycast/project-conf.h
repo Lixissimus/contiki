@@ -116,14 +116,16 @@
 // #define CC2538_RF_CONF_TX_POWER 0x42
 
 /* configure routing */
-// #include "net/orpl/orpl-autoconf.h"
-
-/* when using rpl, upwards only */
+#if 1
+#include "net/orpl/orpl-autoconf.h"
+/* set upwards routing only */
+#undef ORPL_CONF_DOWNWARD_ROUTES
+#define ORPL_CONF_DOWNWARD_ROUTES 0
+#else
+/* set upwards routing only */
 #undef RPL_CONF_MOP
 #define RPL_CONF_MOP RPL_MOP_NO_DOWNWARD_ROUTES
+#endif
 
-/* set upwards routing only */
-// #undef ORPL_CONF_DOWNWARD_ROUTES
-// #define ORPL_CONF_DOWNWARD_ROUTES 0
 
 #endif /* PROJECT_ANYCAST_CONF_H_ */

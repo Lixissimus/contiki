@@ -69,6 +69,9 @@
 #define DEBUG 0
 #include "net/ip/uip-debug.h"
 
+#include <inttypes.h>
+#define ANNOTATE_L(src, dst) printf("#L %" PRIu16 " %" PRIu16 "\n", src, dst)
+
 #if UIP_LOGGING
 #include <stdio.h>
 void uip_log(char *msg);
@@ -599,6 +602,7 @@ tcpip_ipv6_output(void)
       {
         /* destination is immediate neighbor, no routing required */
         PRINTF("tcpip: immediate neighbor\n");
+        ANNOTATE_L(lladdr_id_mapping_own_id(), lladdr_id_mapping_id_from_ll(&dest_lladdr));
         tcpip_output((uip_lladdr_t *) &dest_lladdr);
         uip_clear_buf();
         return;

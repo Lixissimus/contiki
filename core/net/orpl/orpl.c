@@ -46,6 +46,7 @@
 #include "net/rpl/rpl-private.h"
 
 #include "lib/random.h"
+#include "lib/lladdr-id-mapping.h"
 
 #include "orpl-routing-set.h"
 #include "orpl.h"
@@ -55,8 +56,11 @@
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
+#include <inttypes.h>
+#define ANNOTATE_L(src, dst) printf("#L %" PRIu16 " %" PRIu16 "\n", src, dst)
 #else /* DEBUG */
 #define PRINTF(...)
+#define ANNOTATE_L(src, dst)
 #endif /* DEBUG */
 
 #define PRINT6ADDR(addr) PRINTF(                                                \
@@ -129,6 +133,7 @@ orpl_should_receive()
     /* Todo: Enforce some minimal routing progress here */
     if(src_rank > orpl_current_edc()) {
       // PRINTF("ORPL: keep packet, routing upwards\n");
+      ANNOTATE_L(lladdr_id_mapping_own_id(), lladdr_id_mapping_id_from_ll(&addr));
       return ORPL_ROUTE_KEEP;
     } else {
       // PRINTF("ORPL: reject packet routing upwards\n");
@@ -152,6 +157,7 @@ orpl_should_receive()
 enum orpl_routing_decision
 orpl_make_routing_decision(uip_ipaddr_t *dest_addr)
 {
+  
   if(uip_ds6_is_my_addr(dest_addr)) {
     return ORPL_ROUTE_KEEP;
   }
