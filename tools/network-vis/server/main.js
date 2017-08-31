@@ -70,10 +70,32 @@ wss.on('connection', ws => {
                   break;
                 case "#N":
                   /* neighbor command: #N <id> <nbrId> */
-                  command.name = "N"
+                  command.name = "N";
                   command.id = tokens[1];
                   command.nbrId = tokens[2];
                   break;
+                case "#P":
+                  /* packet command: #P <from> <to> <mod 0|1> <seqNum> */
+                  command.name = "P";
+                  command.from = tokens[1];
+                  command.to = tokens[2];
+                  command.mod = parseInt(tokens[3]) ? "rec" : "sent";
+                  command.seqNum = tokens[4];
+                  break;
+                case "#DR":
+                  /* delivery ratio command: #DR <id> <from> <rec> <exp> */
+                  command.name = "DR";
+                  command.id = tokens[1];
+                  command.from = tokens[2];
+                  command.rec = tokens[3];
+                  command.exp = tokens[4];
+                  break;
+                case "#DC":
+                  /* duty cycle command: #DC <id> <enumerator> <divisor> */
+                  command.name = "DC";
+                  command.id = tokens[1];
+                  command.dcOn = tokens[2];
+                  command.total = tokens[3];
                 default:
                   break;
               }

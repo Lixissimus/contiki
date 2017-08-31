@@ -6,6 +6,11 @@ let link = svg.append("g").attr("class", "links");
 const links = [];
 const neighbors = {};
 
+let ipHop;
+
+const sendTime = {};
+const latencies = [];
+
 const color = d3.scaleOrdinal(d3.schemeCategory20);
 
 const simulation = d3.forceSimulation()
@@ -44,8 +49,8 @@ d3.json("graphs/example.json", (error, graph) => {
           tooltip.transition()
               .duration(200)
               .style("opacity", .9);
-          tooltip.html(d.id + "<br>" + d.rank)
-              .style("left", (d3.event.pageX) + "px")
+          tooltip.html(`${d.id} <br> rank: ${d.rank} <br> dc: ${d.dc}%`)
+              .style("left", (d3.event.pageX + 10) + "px")
               .style("top", (d3.event.pageY - 28) + "px");
       })
       .on("mouseout", d => {		
@@ -54,8 +59,17 @@ d3.json("graphs/example.json", (error, graph) => {
             .style("opacity", 0);
       });
 
-  // node.append("title")
-  //     .text(function(d) { return d.id; });
+  ipHop = svg.insert("g", ":first-child")
+      .attr("class", "ipHops")
+      .selectAll("line")
+      .data(graph.ipHops)
+      .enter().append("line")
+      .attr("id", d => { return d.id; })
+      .attr("x1", d => { return d3.select("#" + d.source).attr("cx"); })
+      .attr("y1", d => { return d3.select("#" + d.source).attr("cy"); })
+      .attr("x2", d => { return d3.select("#" + d.target).attr("cx"); })
+      .attr("y2", d => { return d3.select("#" + d.target).attr("cy"); })
+      .style("opacity", 0);
 
   simulation
       .nodes(graph.nodes)
@@ -65,7 +79,13 @@ d3.json("graphs/example.json", (error, graph) => {
       .links(graph.links);
 
   function ticked() {
-    d3.selectAll("line")
+    d3.selectAll(".links").selectAll("line")
+        .attr("x1", d => { return d3.select("#" + d.source).attr("cx"); })
+        .attr("y1", d => { return d3.select("#" + d.source).attr("cy"); })
+        .attr("x2", d => { return d3.select("#" + d.target).attr("cx"); })
+        .attr("y2", d => { return d3.select("#" + d.target).attr("cy"); });
+
+    d3.select(".ipHops").selectAll("line")
         .attr("x1", d => { return d3.select("#" + d.source).attr("cx"); })
         .attr("y1", d => { return d3.select("#" + d.source).attr("cy"); })
         .attr("x2", d => { return d3.select("#" + d.target).attr("cx"); })
@@ -131,7 +151,6 @@ function annotateRank(id, rank) {
 }
 
 function annotateNeighbor(id, nbrId) {
-  /* Todo */
   if (!neighbors[id]) {
     neighbors[id] = {};
   }
@@ -157,11 +176,53 @@ function annotateNeighbor(id, nbrId) {
           .attr("y1", d => { return d3.select("#" + d.source).attr("cy"); })
           .attr("x2", d => { return d3.select("#" + d.target).attr("cx"); })
           .attr("y2", d => { return d3.select("#" + d.target).attr("cy"); });
-      
-      // redraw
-      // ticked();
     }
   }
+}
+
+function packetSent(from, to, seqNum) {
+  sendTime[`${from}-${to}-${seqNum}`] = window.performance.now();
+}
+
+function packetReceived(from, to, seqNum) {
+  let time = window.performance.now();
+  let latency = time - sendTime[`${from}-${to}-${seqNum}`];
+  latencies.push(latency);
+  let avg = latencies.reduce((a, b) => { return a + b }, 0) / latencies.length;
+  
+  console.log("Latency:", latency);
+  d3.select("#last-latency").html(latency + " ms");
+  d3.select("#avg-latency").html(avg + " ms");
+
+  d3.select(".ipHops").select(`#hop-${to}-${from}`)
+      .transition()
+        .delay(500)
+        .duration(500)
+        .style("opacity", .6)
+      .transition()
+        .delay(1000)
+        .duration(200)
+        .style("opacity", 0);
+}
+
+function annotateDeliveryRatio(id, from, rec, exp) {
+  d3.select("node-" + id)
+      .each(d => {
+        if (!d.dr) {
+          d.dr = {};
+        }
+        d.dr[from] = {
+          "rec": rec,
+          "exp": exp
+        }
+      });
+}
+
+function annotateDutyCycle(id, dcOn, total) {
+  d3.select("#node-" + id)
+      .each(d => {
+        d.dc = Math.round(dcOn / total * 10000) / 100;
+      });
 }
 
 /* communication */
@@ -177,7 +238,6 @@ connection.onerror = () => {
 }
 
 connection.onmessage = message => {
-  console.log('received', message.data);
   const command = JSON.parse(message.data);
   switch (command.name) {
     case 'H':
@@ -195,6 +255,22 @@ connection.onmessage = message => {
     case 'N':
       /* neighbor command */
       annotateNeighbor(command.id, command.nbrId);
+      break;
+    case 'P':
+      /* packet command */
+      if (command.mod === "sent") {
+        packetSent(command.from, command.to, command.seqNum);
+      } else {
+        // rec
+        packetReceived(command.from, command.to, command.seqNum);
+      }
+      break;
+    case 'DR':
+      annotateDeliveryRatio(command.id, command.from, parseInt(command.rec), parseInt(command.exp));
+      break;
+    case 'DC':
+      /* duty cycle command */
+      annotateDutyCycle(command.id, parseInt(command.dcOn), parseInt(command.total));
       break;
     default:
       console.log('Unknown command', command.name);
