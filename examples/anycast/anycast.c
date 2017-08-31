@@ -72,11 +72,17 @@
 #define ANNOTATE_I(id, info) printf("#I %" PRIu16 " %s\n", id, info)
 #define ANNOTATE_R(id, rank) printf("#R %" PRIu16 " %" PRIu16 "\n", id, rank)
 #define ANNOTATE_N(id, nbr_id) printf("#N %" PRIu16 " %" PRIu16 "\n", id, nbr_id)
+#define ANNOTATE_P(from, to, mod, seq_num) printf("#P %" PRIu16 " %" PRIu16 " %d %" PRIu32 "\n", from, to, mod, seq_num)
+#define ANNOTATE_DR(id, from, rec, exp) printf("#DR %" PRIu16 " %" PRIu16 " %" PRIu32 " %" PRIu32 "\n", id, from, rec, exp)
+#define ANNOTATE_DC(id, enum, divi) printf("#DC %" PRIu16 " %" PRIu32 " %" PRIu32 "\n", id, enum, divi)
 #else
 #define ANNOTATE_H(id)
 #define ANNOTATE_I(id, info)
 #define ANNOTATE_R(id, rank)
 #define ANNOTATE_N(id, nbr_id)
+#define ANNOTATE_P(from, to, mod, seq_num)
+#define ANNOTATE_DR(id, from, rec, exp)
+#define ANNOTATE_DC(id, enum, divi)
 #endif
 
 #define PERIODIC_SEND 1
@@ -159,8 +165,10 @@ receiver(struct simple_udp_connection *c,
   } else {
     led_debug_set_all();
     ANNOTATE_H(own_id);
+    ANNOTATE_P(sender_id, own_id, 1, msg_number);
     last_received[sender_id-1] = msg_number;
     packets_received[sender_id-1]++;
+    ANNOTATE_DR(own_id, sender_id, packets_received[sender_id-1], packets_expected);
   }
   
 }
@@ -236,6 +244,7 @@ print_metrics(void)
         stats.time_on, stats.time_total, stats.time_on * 100 / stats.time_total,
         (stats.time_on * 100 % stats.time_total) * 10 / stats.time_total
     );
+    ANNOTATE_DC(own_id, stats.time_on, stats.time_total);
   }
 #endif
 }
@@ -368,6 +377,7 @@ PROCESS_THREAD(anycast_process, ev, data)
       printf("\n");
       sprintf(buf, "%" PRIu32, msg_idx);
       led_debug_set_all();
+      ANNOTATE_P(own_id, dest_id, 0, msg_idx);
       simple_udp_sendto(&anycast_connection, buf, strlen(buf) + 1, &addr);
     }
   }
