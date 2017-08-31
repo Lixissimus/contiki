@@ -44,6 +44,12 @@
 #include "net/ip/uip.h"
 #include "net/rpl/rpl.h"
 
+#ifdef ORPL_CONF_EDC_W
+#define ORPL_EDC_W ORPL_CONF_EDC_W
+#else /* ORPL_CONF_EDC_W */
+#define ORPL_EDC_W 64
+#endif /* ORPL_CONF_EDC_W */
+
 /* Fixed point divisor */
 #define EDC_DIVISOR 128
 
@@ -53,6 +59,9 @@ enum orpl_routing_decision {
   ORPL_ROUTE_KEEP,
   ORPL_ROUTE_REJECT
 };
+
+/* Total number of broadcast sent */
+extern uint32_t orpl_broadcast_count;
 
 enum orpl_routing_decision orpl_should_receive();
 enum orpl_routing_decision orpl_make_routing_decision(uip_ipaddr_t *dest_addr);
@@ -65,6 +74,9 @@ void orpl_update_edc(rpl_rank_t edc);
 
 /* Get the current edc or 0xffff, if we are not part of any DODAG */
 rpl_rank_t orpl_current_edc();
+
+/* Check if we are the root */
+int orpl_is_root();
 
 /* Called from RPL trickle callback */
 void orpl_trickle_callback(rpl_instance_t *instance);

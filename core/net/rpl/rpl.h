@@ -85,6 +85,8 @@ typedef uint16_t rpl_ocp_t;
 /* IANA Objective Code Point as defined in RFC6550 */
 #define RPL_OCP_OF0     0
 #define RPL_OCP_MRHOF   1
+/* This is not official */
+#define RPL_OCP_EDC     2
 
 struct rpl_metric_object_energy {
   uint8_t flags;
@@ -116,6 +118,9 @@ struct rpl_parent {
 #if RPL_WITH_MC
   rpl_metric_container_t mc;
 #endif /* RPL_WITH_MC */
+#if ORPL_ENABLED
+  uint16_t bc_ackcount;
+#endif /* ORPL_ENABLED */
   rpl_rank_t rank;
   uint8_t dtsn;
   uint8_t flags;

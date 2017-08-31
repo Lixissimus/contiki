@@ -88,7 +88,6 @@ static struct ctimer routing_set_broadcast_timer;
  * after each transmission attempt */
 int sending_routing_set = 0;
 /* Data structure used for routing set broadcasting. */
-/* Todo: why the padding? */
 struct routing_set_broadcast_s {
   uint16_t edc;
   union {
@@ -103,6 +102,13 @@ static void request_routing_set_broadcast();
 
 /* Rank changes of more than RANK_MAX_CHANGE trigger a trickle timer reset */
 #define RANK_MAX_CHANGE (2*EDC_DIVISOR)
+
+/* A flag that tells whether we are root or not */
+static int is_root_flag = 0;
+
+/* Total number of broadcast sent */
+uint32_t orpl_broadcast_count = 0;
+
 /* The last boradcasted EDC */
 static uint16_t last_broadcasted_edc = 0xffff;
 
@@ -290,6 +296,12 @@ orpl_trickle_callback(rpl_instance_t *instance)
 #endif /* ORPL_CONF_DOWNWARDS_ROUTES */
 
   rpl_recalculate_ranks();
+}
+
+int
+orpl_is_root()
+{
+  return is_root_flag;
 }
 
 void

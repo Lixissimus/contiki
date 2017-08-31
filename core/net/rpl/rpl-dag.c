@@ -711,6 +711,9 @@ rpl_add_parent(rpl_dag_t *dag, rpl_dio_t *dio, uip_ipaddr_t *addr)
 #if RPL_WITH_MC
       memcpy(&p->mc, &dio->mc, sizeof(p->mc));
 #endif /* RPL_WITH_MC */
+#if ORPL_ENABLED
+      p->bc_ackcount = 0;
+#endif /* ORPL_ENABLED */
     }
   }
 
