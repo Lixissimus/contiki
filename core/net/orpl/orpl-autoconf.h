@@ -44,6 +44,10 @@
 #undef POTR_CONF_WITH_ANYCAST
 #define POTR_CONF_WITH_ANYCAST 1
 
+/* use opportunistic unicasts */
+// #undef POTR_CONF_OPP_UNICAST
+// #define POTR_CONF_OPP_UNICAST 1
+
 /* just works with lladdr size of 8 */
 #undef LINKADDR_CONF_SIZE
 #define LINKADDR_CONF_SIZE 8

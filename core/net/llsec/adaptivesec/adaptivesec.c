@@ -351,10 +351,13 @@ input(void)
     }
 
 #if POTR_ENABLED
+/* Todo: send seqno in opportunistic unicasts!!! */
+#if !POTR_CONF_OPP_UNICAST
     if(potr_received_duplicate()) {
       PRINTF("adaptivesec: Duplicate\n");
       return;
     }
+#endif /* !POTR_CONF_OPP_UNICAST */
 #endif /* POTR_ENABLED */
 #if !ILOS_ENABLED
     akes_nbr_prolong(entry->permanent);

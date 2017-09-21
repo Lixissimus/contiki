@@ -202,7 +202,7 @@
 #include <stdio.h>
 
 #define DEBUG 0
-#if DEBUG && MAIN_DEBUG_CONF
+#if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else /* DEBUG */
@@ -671,14 +671,15 @@ on_fifop(void)
         PRINTF("secrdc: rejected frame of length %i\n", packetbuf_datalen());
         finish_duty_cycle();
       } else {
+        PRINTF("secrdc: receive frame\n");
 #if POTR_CONF_WITH_ANYCAST
         u.duty_cycle.is_anycast = potr_is_anycast();
-#if ORPL_ENABLED
+#if ORPL_ENABLED && !POTR_CONF_OPP_UNICAST
         if(u.duty_cycle.is_anycast && (orpl_should_receive() != ORPL_ROUTE_KEEP)) {
           disable_and_reset_radio();
           finish_duty_cycle();
         } else {
-#endif /* ORPL_ENABLED */
+#endif /* ORPL_ENABLED && !POTR_CONF_OPP_UNICAST */
 #endif /* POTR_CONF_WITH_ANYCAST */
         u.duty_cycle.shall_send_acknowledgement = !packetbuf_holds_broadcast();
 #if SECRDC_WITH_SECURE_PHASE_LOCK
@@ -692,9 +693,9 @@ on_fifop(void)
         NETSTACK_RADIO_ASYNC.set_object(RADIO_PARAM_FIFOP_CALLBACK,
             on_final_fifop,
             NETSTACK_RADIO_ASYNC.remaining_payload_bytes() + RADIO_ASYNC_CHECKSUM_LEN);
-#if POTR_CONF_WITH_ANYCAST && ORPL_ENABLED
+#if POTR_CONF_WITH_ANYCAST && ORPL_ENABLED && !POTR_CONF_OPP_UNICAST
         }
-#endif /* POTR_CONF_WITH_ANYCAST && ORPL_ENABLED */
+#endif /* POTR_CONF_WITH_ANYCAST && ORPL_ENABLED && !POTR_CONF_OPP_UNICAST*/
       }
       disable_local_packetbuf();
     }
@@ -955,6 +956,43 @@ secrdc_get_wake_up_counter(rtimer_clock_t t)
 }
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
+void
+rewrite_receiver_address(const linkaddr_t *addr) {
+  linkaddr_t *rec_addr;
+  rec_addr = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
+  memcpy(rec_addr, addr, LINKADDR_SIZE);
+}
+/*---------------------------------------------------------------------------*/
+linkaddr_t *
+find_anycast_receiver(rtimer_clock_t strobe_start) {
+  rpl_rank_t own_rank;
+  struct akes_nbr_entry *next;
+  struct akes_nbr *nbr;
+  linkaddr_t *best_addr, *addr;
+  rtimer_clock_t min_diff, diff;
+
+  min_diff = 0xffffffff;
+  own_rank = orpl_current_edc();
+  next = akes_nbr_head();
+  while(next) {
+    if(next->refs[AKES_NBR_PERMANENT]) {
+      addr = akes_nbr_get_addr(next);
+      nbr = next->permanent;
+      diff = shift_to_future(nbr->phase.t) - strobe_start;
+      /* Todo: insert minimum routing progress */
+      if(diff < min_diff && rpl_get_parent_rank((uip_lladdr_t *) addr) < own_rank) {
+        min_diff = diff;
+        best_addr = addr;
+      }
+    }
+    next = akes_nbr_next(next);
+  }
+
+  
+
+  return min_diff < 0xffffffff ? best_addr : NULL;
+}
+/*---------------------------------------------------------------------------*/
 rtimer_clock_t
 secrdc_get_strobe_start_time(void)
 {
@@ -1068,8 +1106,25 @@ PROCESS_THREAD(post_processing, ev, data)
           }
 #if POTR_CONF_WITH_ANYCAST
         } else if(u.strobe.is_anycast) {
-          // u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE + (random_rand() % WAKEUP_INTERVAL);
+#if POTR_CONF_OPP_UNICAST
+          /* Transform anycast into unicast */
+          // printf("unicast anycast\n");
+          linkaddr_t *new_rec;
+          new_rec = find_anycast_receiver(RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE);
+          if(new_rec) {
+            // printf("found receiver, write address\n");
+            rewrite_receiver_address(new_rec);
+            // printf("wrote address, goto unicast\n");
+            goto send_unicast;
+          } else {
+            // printf("found no receiver\n");
+            u.strobe.result = MAC_TX_ERR_FATAL;
+            on_strobed();
+            continue;
+          }
+#else 
           u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE;
+#endif /* POTR_CONF_OPP_UNICAST */
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
 #endif /* POTR_CONF_WITH_ANYCAST */
@@ -1091,6 +1146,9 @@ PROCESS_THREAD(post_processing, ev, data)
           }
           u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE;
         } else {
+#if POTR_CONF_WITH_ANYCAST && POTR_CONF_OPP_UNICAST
+        send_unicast:
+#endif /* POTR_CONF_WITH_ANYCAST && POTR_CONF_OPP_UNICAST */
           akes_nbr_copy_key(u.strobe.acknowledgement_key, adaptivesec_group_key);
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
           u.strobe.phase = obtain_phase_lock_data();
@@ -1116,6 +1174,7 @@ PROCESS_THREAD(post_processing, ev, data)
               - u.strobe.uncertainty);
 
           while(!rtimer_is_schedulable(u.strobe.strobe_start, ILOS_MIN_TIME_TO_STROBE + 1)) {
+            printf("NOT SCHEDULABLE!\n");
             u.strobe.strobe_start += WAKEUP_INTERVAL;
           }
         }

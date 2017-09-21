@@ -83,7 +83,7 @@
 #include <stdio.h>
 
 #define DEBUG 0
-#if DEBUG && MAIN_DEBUG_CONF
+#if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else /* DEBUG */
@@ -735,9 +735,6 @@ potr_parse_and_validate(void)
       PRINTF("potr: Invalid anycast OTP %u (%u)\n", restore_anycast_wakeup_counter(NULL).u32, type);
       return FRAMER_FAILED;
     }
-
-    /* Todo: check nonce for replay protection */
-
     break;
 #endif /* POTR_CONF_WITH_ANYCAST */
   case POTR_FRAME_TYPE_HELLO:
