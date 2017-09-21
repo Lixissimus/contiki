@@ -227,6 +227,17 @@ function annotateDutyCycle(id, dcOn, total) {
 
 /* communication */
 
+const connectButton = d3.select("#connect-button");
+const ipField = d3.select("#ip-field");
+
+connectButton.on("click", () => {
+  const ip = ipField.property("value");
+  connection.send(JSON.stringify({
+    type: "connect",
+    ip: ip
+  }));
+});
+
 const connection = new WebSocket('ws://127.0.0.1:8001');
 
 connection.onopen = () => {

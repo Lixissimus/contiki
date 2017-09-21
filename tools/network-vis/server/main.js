@@ -3,12 +3,37 @@ const { spawn } = require('child_process');
 const WebSocket = require('ws');
 
 const wss = new WebSocket.Server({ port: 8001 });
-wss.on('connection', ws => {
+let ws;
+wss.on('connection', _ws => {
+  ws = _ws;
   console.log("Client connected!");
   const children = [];
 
   ws.on('message', message => {
     console.log('received: %s', message);
+    const parsed = JSON.parse(message);
+
+    switch (parsed.type) {
+      case "connect":
+        connectToCommServer(parsed.ip);
+        break;
+      case "request-sync":
+        ws.send(JSON.stringify({
+          type: "sync-1",
+          timestamp: Date.now()
+        }));
+        break;
+      case "sync-2":
+        let t = Date.now();
+        ws.send(JSON.stringify({
+          type: "sync-3",
+          t1: parsed.t1,
+          t2: t - parsed.timestamp
+        }));
+        break;
+      default:
+        console.log("Received unknown message type");
+    }
   });
 
   ws.on('close', () => {
@@ -48,7 +73,7 @@ wss.on('connection', ws => {
 
           lines.forEach(line => {
             if (line.startsWith('#')) {
-              const command = {};
+              const command = { type: "message" };
               const tokens = line.split(" ");
               switch (tokens[0]) {
                 case "#H":
@@ -109,5 +134,77 @@ wss.on('connection', ws => {
     });
   });
 });
+
+const deltas = [];
+let commConnection;
+function connectToCommServer(ip) {
+  commConnection = new WebSocket(`ws://${ip}:8001`);
+  commConnection.on('open', () => {
+    console.log("CommConnection open");
+    startClockSync();
+  });
+
+  commConnection.on('close', () => {
+    console.log("CommConnection closed");
+    clearInterval(syncInterval);
+  });
+
+  commConnection.on('message', message => {
+    const parsed = JSON.parse(message);
+    switch (parsed.type) {
+      case "message":
+        console.log("message:", message);
+        // forward message
+        ws.send(message);
+        break;
+      case "sync-1":
+        let t = Date.now();
+        commConnection.send(JSON.stringify({
+          type: "sync-2",
+          t1: t - parsed.timestamp,
+          timestamp: t
+        }));
+        break;
+      case "sync-3":
+        let delta = (parsed.t2 - parsed.t1) / 2;
+        if (deltas.length >= 5) {
+          deltas.shift();
+        }
+        deltas.push(delta);
+        console.log("deltas:", deltas);
+        console.log("New delta:", delta);
+        console.log("Current delta:", currentClockDelta());
+        break;
+      default:
+        console.log("Unknown message type");
+    }
+  });
+}
+
+function currentClockDelta() {
+  if (deltas.length === 0) {
+    return -1;
+  }
+
+  let ret = deltas[0];
+  deltas.forEach(d => {
+    if (d < ret) {
+      ret = d;
+    }
+  });
+  
+  return ret;
+}
+
+let syncInterval;
+function startClockSync() {
+  syncInterval = setInterval(initiateClockSync, 5000);
+}
+
+function initiateClockSync() {
+  commConnection.send(JSON.stringify({
+    type: "request-sync"
+  }));
+}
 
 console.log("Waiting for connection...");
