@@ -406,8 +406,6 @@ create_anycast_otp(uint8_t *p, int forward, void *entry)
       (entry && ((struct akes_nbr_entry *)entry)->permanent) ?
           &((struct akes_nbr_entry *)entry)->permanent->phase :
           NULL);
-  /* because we dont use strobe index in OTP */
-  block[8] = 0x00;
 
   if (forward) {
     /* for sending anycast, we use our own group key */
