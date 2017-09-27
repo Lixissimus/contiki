@@ -393,8 +393,19 @@ create_normal_otp(uint8_t *p, uint8_t *group_key)
 #endif /* ILOS_ENABLED */
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
+void
+potr_recreate_otp(uint8_t *p, uint8_t *group_key, uint8_t *nonce, uint8_t type) {
+  uint8_t block[AES_128_BLOCK_SIZE];
+
+  memset(block, 0, AES_128_BLOCK_SIZE);
+  memcpy(block, nonce, 13);
+  block[13] = type;
+
+  do_create_normal_otp(p, group_key, block);
+}
+/*---------------------------------------------------------------------------*/
 static void
-create_anycast_otp(uint8_t *p, int forward, void *entry)
+create_anycast_otp(uint8_t *p, int forward, void *entry, enum potr_frame_type type)
 {
   uint8_t block[AES_128_BLOCK_SIZE];
   uint8_t *group_key;
@@ -406,6 +417,11 @@ create_anycast_otp(uint8_t *p, int forward, void *entry)
       (entry && ((struct akes_nbr_entry *)entry)->permanent) ?
           &((struct akes_nbr_entry *)entry)->permanent->phase :
           NULL);
+
+  /* keep strobe index as part of nonce */
+
+  /* add frame type to otp */
+  block[13] = type;
 
   if (forward) {
     /* for sending anycast, we use our own group key */
@@ -515,7 +531,7 @@ create(void)
   case POTR_FRAME_TYPE_ANYCAST_EVEN_1:
   case POTR_FRAME_TYPE_ANYCAST_ODD_0:
   case POTR_FRAME_TYPE_ANYCAST_ODD_1:
-    create_anycast_otp(p, 1, NULL);
+    create_anycast_otp(p, 1, NULL, type);
 #if DEBUG
     rtimer_clock_t planned_start = secrdc_get_next_strobe_start();
     PRINTF("wakeup counter at %u: %u (%u)\n", planned_start, secrdc_get_wake_up_counter(planned_start).u32, type);
@@ -728,7 +744,7 @@ potr_parse_and_validate(void)
     /* read strobe index */
     NETSTACK_RADIO_ASYNC.read_payload(1);
     strobe_index_received = *(p + POTR_OTP_LEN);
-    create_anycast_otp(otp.u8, 0, entry);
+    create_anycast_otp(otp.u8, 0, entry, type);
     if(memcmp(otp.u8, p, POTR_OTP_LEN)) {
       PRINTF("potr: Invalid anycast OTP %u (%u)\n", restore_anycast_wakeup_counter(NULL).u32, type);
       return FRAMER_FAILED;

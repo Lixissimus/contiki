@@ -124,6 +124,7 @@ int potr_parse_and_validate(void);
 int potr_is_helloack(void);
 int potr_is_ack(void);
 #if POTR_CONF_WITH_ANYCAST
+void potr_recreate_otp(uint8_t *p, uint8_t *group_key, uint8_t *block, uint8_t type);
 void potr_create_ll_anycast_addr(linkaddr_t *addr);
 int potr_is_ll_anycast_addr(const linkaddr_t *addr);
 int potr_is_anycast(void);

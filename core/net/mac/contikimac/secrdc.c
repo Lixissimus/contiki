@@ -674,6 +674,11 @@ on_fifop(void)
         PRINTF("secrdc: receive frame\n");
 #if POTR_CONF_WITH_ANYCAST
         u.duty_cycle.is_anycast = potr_is_anycast();
+        /* 
+         * with opp_unicasts, receiver can just accept packet for now,
+         * because only upwards routing is implement,
+         * for downwards routing, routing set would be consulted
+         */
 #if ORPL_ENABLED && !POTR_CONF_OPP_UNICAST
         if(u.duty_cycle.is_anycast && (orpl_should_receive() != ORPL_ROUTE_KEEP)) {
           disable_and_reset_radio();
@@ -956,20 +961,14 @@ secrdc_get_wake_up_counter(rtimer_clock_t t)
 }
 /*---------------------------------------------------------------------------*/
 #if POTR_CONF_WITH_ANYCAST
-void
-rewrite_receiver_address(const linkaddr_t *addr) {
-  linkaddr_t *rec_addr;
-  rec_addr = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
-  memcpy(rec_addr, addr, LINKADDR_SIZE);
-}
-/*---------------------------------------------------------------------------*/
+#if POTR_CONF_OPP_UNICAST
 linkaddr_t *
 find_anycast_receiver(rtimer_clock_t strobe_start) {
   rpl_rank_t own_rank;
   struct akes_nbr_entry *next;
   struct akes_nbr *nbr;
   linkaddr_t *best_addr, *addr;
-  rtimer_clock_t min_diff, diff;
+  rtimer_clock_t min_diff, diff, wakeup;
 
   min_diff = 0xffffffff;
   own_rank = orpl_current_edc();
@@ -978,20 +977,20 @@ find_anycast_receiver(rtimer_clock_t strobe_start) {
     if(next->refs[AKES_NBR_PERMANENT]) {
       addr = akes_nbr_get_addr(next);
       nbr = next->permanent;
-      diff = shift_to_future(nbr->phase.t) - strobe_start;
+      wakeup = shift_to_future(nbr->phase.t);
+      diff = rtimer_delta(wakeup, strobe_start);
+
       /* Todo: insert minimum routing progress */
-      if(diff < min_diff && rpl_get_parent_rank((uip_lladdr_t *) addr) < own_rank) {
+      if(diff < min_diff && wakeup > strobe_start && rpl_get_parent_rank((uip_lladdr_t *) addr) < own_rank) {
         min_diff = diff;
         best_addr = addr;
       }
     }
     next = akes_nbr_next(next);
   }
-
-  
-
   return min_diff < 0xffffffff ? best_addr : NULL;
 }
+#endif /* POTR_CONF_OPP_UNICAST */
 /*---------------------------------------------------------------------------*/
 rtimer_clock_t
 secrdc_get_strobe_start_time(void)
@@ -1036,6 +1035,11 @@ secrdc_specialize_anycast_frame_type(void)
   }
   // printf("rel time sender: %d\n", rel_time);
 
+  if(type == POTR_FRAME_TYPE_ANYCAST_EVEN_0 || type == POTR_FRAME_TYPE_ANYCAST_ODD_0) {
+    printf("FIRST\n");
+  } else {
+    printf("SECOND\n");
+  }
   return type;
 }
 #endif /* POTR_CONF_WITH_ANYCAST */
@@ -1108,16 +1112,14 @@ PROCESS_THREAD(post_processing, ev, data)
         } else if(u.strobe.is_anycast) {
 #if POTR_CONF_OPP_UNICAST
           /* Transform anycast into unicast */
-          // printf("unicast anycast\n");
           linkaddr_t *new_rec;
-          new_rec = find_anycast_receiver(RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE);
+          /* include some buffer time, not sure if neccessary */
+          new_rec = find_anycast_receiver(RTIMER_NOW() + 2*ILOS_MIN_TIME_TO_STROBE);
           if(new_rec) {
-            // printf("found receiver, write address\n");
-            rewrite_receiver_address(new_rec);
-            // printf("wrote address, goto unicast\n");
+            /* rewrite address, replace anycast addr with unicast addr */
+            packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, new_rec);
             goto send_unicast;
           } else {
-            // printf("found no receiver\n");
             u.strobe.result = MAC_TX_ERR_FATAL;
             on_strobed();
             continue;
@@ -1598,8 +1600,25 @@ transmit(void)
     /* set strobe index */
     u.strobe.unsecured_frame[POTR_HEADER_LEN] = u.strobe.strobes;
     u.strobe.nonce[8] = u.strobe.strobes;
+#if POTR_CONF_WITH_ANYCAST
+    if(u.strobe.is_anycast) {
+      /* recalculate otp with strobe idx */
+      potr_recreate_otp(
+          &u.strobe.unsecured_frame[POTR_HEADER_LEN - POTR_OTP_LEN],
+          u.strobe.key, u.strobe.nonce, u.strobe.unsecured_frame[0]);
+      /* update otp and strobe idx in radio buffer */
+      NETSTACK_RADIO_ASYNC.reprepare(POTR_HEADER_LEN - POTR_OTP_LEN, 
+          &u.strobe.unsecured_frame[POTR_HEADER_LEN - POTR_OTP_LEN], 
+          POTR_OTP_LEN + 1);
+    } else {
+      /* just update strobe idx */
+      NETSTACK_RADIO_ASYNC.reprepare(POTR_HEADER_LEN, &u.strobe.strobes, 1);
+    }
+#else
     NETSTACK_RADIO_ASYNC.reprepare(POTR_HEADER_LEN, &u.strobe.strobes, 1);
+#endif /* POTR_CONF_WITH_ANYCAST */
   }
+
 
   memcpy(secured_frame, u.strobe.unsecured_frame, u.strobe.totlen);
   m = u.strobe.shall_encrypt ? (secured_frame + u.strobe.a_len) : NULL;
