@@ -1,6 +1,7 @@
 const { exec } = require('child_process');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
+const now = require('performance-now');
 
 const wss = new WebSocket.Server({ port: 8001 });
 let ws;
@@ -20,11 +21,11 @@ wss.on('connection', _ws => {
       case "request-sync":
         ws.send(JSON.stringify({
           type: "sync-1",
-          timestamp: Date.now()
+          timestamp: now()
         }));
         break;
       case "sync-2":
-        let t = Date.now();
+        let t = now();
         ws.send(JSON.stringify({
           type: "sync-3",
           t1: parsed.t1,
@@ -104,8 +105,16 @@ wss.on('connection', _ws => {
                   command.name = "P";
                   command.from = tokens[1];
                   command.to = tokens[2];
-                  command.mod = parseInt(tokens[3]) ? "rec" : "sent";
                   command.seqNum = tokens[4];
+                  if (parseInt(tokens[3])) {
+                    // received
+                    command.mod = "rec";
+                    command.latency = packetReceived(command.from, command.to, command.seqNum);
+                  } else {
+                    // sent
+                    command.mod = "sent";
+                    command.timestamp = packetSent(command.from, command.to, command.seqNum);
+                  }
                   break;
                 case "#DR":
                   /* delivery ratio command: #DR <id> <from> <rec> <exp> */
@@ -124,6 +133,7 @@ wss.on('connection', _ws => {
                 default:
                   break;
               }
+              command.clockDelta = 0;
               ws.send(JSON.stringify(command));
             } else if (line !== "") {
               console.log(line);
@@ -134,6 +144,39 @@ wss.on('connection', _ws => {
     });
   });
 });
+
+const sentTimes = {};
+
+function packetSent(from, to, seqNum) {
+  let t = now();
+  sentTimes[`${from}-${to}-${seqNum}`] = t;
+  console.log("send time:", t);
+  return t;
+}
+
+function receivedPacketSent(from, to, seqNum, timestamp) {
+  let t = timestamp - currentClockDelta();
+  sentTimes[`${from}-${to}-${seqNum}`] = t;
+
+  console.log("curr time:", now());
+  console.log("write:", `${from}-${to}-${seqNum}`, t, timestamp);
+
+  return t;
+}
+
+function packetReceived(_from, _to, seqNum) {
+  let t = now();
+  let from = parseInt(_from);
+  let to = parseInt(_to);
+  if (isNaN(from) || isNaN(to) || !sentTimes[`${from}-${to}-${seqNum}`]) {
+    return -1;
+  }
+
+  const lat =  t - sentTimes[`${from}-${to}-${seqNum}`];
+  delete sentTimes[`${from}-${to}-${seqNum}`];
+
+  return lat;
+}
 
 const deltas = [];
 let commConnection;
@@ -153,12 +196,16 @@ function connectToCommServer(ip) {
     const parsed = JSON.parse(message);
     switch (parsed.type) {
       case "message":
-        console.log("message:", message);
+        if (parsed.name === "P" && parsed.mod === "sent") {
+          // received message with timestamp, apply clock delta
+          console.log("Received packet sent, calculate sent time with clock delta");
+          parsed.timestamp = receivedPacketSent(parsed.from, parsed.to, parsed.seqNum, parsed.timestamp);
+        }
         // forward message
-        ws.send(message);
+        ws.send(JSON.stringify(parsed));
         break;
       case "sync-1":
-        let t = Date.now();
+        let t = now();
         commConnection.send(JSON.stringify({
           type: "sync-2",
           t1: t - parsed.timestamp,
@@ -193,6 +240,7 @@ function currentClockDelta() {
     }
   });
   
+  // our time plus ret equals remote time
   return ret;
 }
 
