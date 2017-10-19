@@ -981,7 +981,7 @@ find_anycast_receiver(rtimer_clock_t strobe_start) {
       diff = rtimer_delta(wakeup, strobe_start);
 
       /* Todo: insert minimum routing progress */
-      if(diff < min_diff && wakeup > strobe_start && rpl_get_parent_rank((uip_lladdr_t *) addr) < own_rank) {
+      if(diff < min_diff && wakeup > strobe_start && rpl_get_parent_rank((uip_lladdr_t *) addr) + ORPL_CONF_MIN_PROGRESS < own_rank) {
         min_diff = diff;
         best_addr = addr;
       }
@@ -1034,12 +1034,6 @@ secrdc_specialize_anycast_frame_type(void)
     }
   }
   // printf("rel time sender: %d\n", rel_time);
-
-  if(type == POTR_FRAME_TYPE_ANYCAST_EVEN_0 || type == POTR_FRAME_TYPE_ANYCAST_ODD_0) {
-    printf("FIRST\n");
-  } else {
-    printf("SECOND\n");
-  }
   return type;
 }
 #endif /* POTR_CONF_WITH_ANYCAST */

@@ -62,7 +62,7 @@
 
 #define SERVICE_ID 112
 #define UDP_PORT 1234
-#define NETWORK_SIZE 8
+#define NETWORK_SIZE 11
 #define ROOT_ID 1
 
 #define DEBUG 1
@@ -103,7 +103,7 @@ static struct ctimer nbr_timer;
 
 /* experiment setup */
 #define STARTUP_DELAY (5*CLOCK_SECOND)
-#define EXP_RUNTIME (40*60*CLOCK_SECOND)
+#define EXP_RUNTIME (500*60*CLOCK_SECOND)
 #define SHUTDOWN_DELAY (1*CLOCK_SECOND)
 
 #define MEASURE_DELIVERY_RATIO 1
@@ -330,6 +330,7 @@ PROCESS_THREAD(anycast_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, RANDOM_INTERVAL);
     print_metrics();
+    // if(own_id == ROOT_ID || (own_id != 4 && own_id != 8)) {
     if(own_id == ROOT_ID) {
       continue;
     }

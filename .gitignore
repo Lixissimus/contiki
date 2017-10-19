@@ -133,3 +133,6 @@ LOG_OPENOCD
 
 # VS Code settings
 .vscode/settings.json
+
+# node modules
+node_modules/

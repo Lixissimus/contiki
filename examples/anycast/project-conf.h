@@ -112,15 +112,19 @@
 
 /* set low transmission power for multihop network simulation */
 #undef CC2538_RF_CONF_TX_POWER
-#define CC2538_RF_CONF_TX_POWER 0x00
-// #define CC2538_RF_CONF_TX_POWER 0x42
+// #define CC2538_RF_CONF_TX_POWER 0x00
+#define CC2538_RF_CONF_TX_POWER 0x42
 
 /* configure routing */
 #if 1
 #include "net/orpl/orpl-autoconf.h"
-/* set upwards routing only */
+/* set upwards routing only, downwards not implemented */
 #undef ORPL_CONF_DOWNWARD_ROUTES
 #define ORPL_CONF_DOWNWARD_ROUTES 0
+
+/* use opportunistic unicasts */
+// #undef POTR_CONF_OPP_UNICAST
+// #define POTR_CONF_OPP_UNICAST 1
 #else
 /* set upwards routing only */
 #undef RPL_CONF_MOP

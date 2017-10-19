@@ -137,7 +137,7 @@ orpl_should_receive()
   /* Todo: check if routing upwards by checking anycast type */
   if(1) {
     /* Todo: Enforce some minimal routing progress here */
-    if(src_rank > orpl_current_edc()) {
+    if(src_rank > orpl_current_edc() + ORPL_CONF_MIN_PROGRESS) {
       // PRINTF("ORPL: keep packet, routing upwards\n");
       ANNOTATE_L(lladdr_id_mapping_own_id(), lladdr_id_mapping_id_from_ll(&addr));
       return ORPL_ROUTE_KEEP;
