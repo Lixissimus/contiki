@@ -21,7 +21,7 @@ export default class Histogram extends React.Component {
     this.bucketArray = [];
     this.dataArray = [];
 
-    this.bSize = 50;
+    this.bucketSize = 50;
     this.maxYTicks = 5;
 
     this.width = this.svgWidth - this.margin.left - this.margin.right;
@@ -50,8 +50,7 @@ export default class Histogram extends React.Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    // Todo: handle bucketSize change
-
+    this.bucketSize = nextProps.bucketSize;
     this.bucketArray = this.groupData(nextProps.values);
 
     this.d3Histogram = d3.select(ReactDOM.findDOMNode(this.refs.histogram));
@@ -107,7 +106,7 @@ export default class Histogram extends React.Component {
     let firstBucket = Number.MAX_SAFE_INTEGER;
     let lastBucket = 0;
     data.forEach(d => {
-      const bucket = Math.floor(d / this.props.bucketSize);
+      const bucket = Math.floor(d / this.bucketSize);
       if (bucket > lastBucket) {
         lastBucket = bucket;
       }
@@ -119,7 +118,7 @@ export default class Histogram extends React.Component {
       } else {
         buckets[bucket]++;
       }
-    });
+    }, this);
     
     // add empty buckets
     for (let i = firstBucket; i <= lastBucket; i++) {
@@ -132,7 +131,7 @@ export default class Histogram extends React.Component {
     const ret = [];
     for (let bucket in buckets) {
       ret.push({
-        name: `${bucket*this.props.bucketSize}-${bucket*this.props.bucketSize + this.props.bucketSize}`,
+        name: `${bucket*this.bucketSize}-${bucket*this.bucketSize + this.bucketSize}`,
         bucket: bucket,
         value: buckets[bucket]
       });
@@ -148,11 +147,11 @@ export default class Histogram extends React.Component {
 
   render() {
     return (
-      <svg width={this.svgWidth} height={this.svgHeight}>
-        <g ref="histogram" />
-      </svg>
+      <div>
+        <svg width={this.svgWidth} height={this.svgHeight}>
+          <g ref="histogram" />
+        </svg>
+      </div>
     );
   }
 }
-
-Histogram.defaultProps = { bucketSize: 50 };

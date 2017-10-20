@@ -1,0 +1,20 @@
+.strips-received rect{
+  fill: steelblue;
+}
+
+.strips-received rect:hover {
+  fill: #96cbf7
+}
+
+.strips-missed rect {
+  fill: brown;
+}
+
+.strips-missed rect:hover {
+  fill: #f97b7b
+}
+
+.labels text {
+  fill: white;
+  font-family: Helvetica;
+}

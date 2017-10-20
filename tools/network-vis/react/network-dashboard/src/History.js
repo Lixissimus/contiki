@@ -5,12 +5,6 @@ import * as d3 from 'd3';
 import './style/History.css'
 
 export default class History extends React.Component {
-  constructor(props) {
-    super(props);
-
-
-  }
-
   componentDidMount() {
     this.tableHead = d3.select(ReactDOM.findDOMNode(this.refs.tableHead));
     this.tableBody = d3.select(ReactDOM.findDOMNode(this.refs.tableBody));

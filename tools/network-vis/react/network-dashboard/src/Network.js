@@ -104,6 +104,7 @@ export default class Network extends React.Component {
       // draw ipHops, but only if we have drawn root already
       if (!this.nodes.select("#node-1").empty()) {
         let ipHops = this.ipHops.selectAll("line").data(data.ipHops);
+        ipHops.exit().remove();
         ipHops.enter().append("line")
               .attr("id", d => { return d.id; })
               .attr("x1", d => { return this.nodes.select("#" + d.source).attr("cx"); })

@@ -10,12 +10,19 @@ import Tile from './Tile';
 import Network from './Network';
 import Histogram from './Histogram';
 import History from './History';
+import StripChart from './StripChart';
 
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     
+    this.history = [];
+    this.deliveryRatios = {};
+    this.isLive = true;
+    this.setStateManual = false;
+    this.time = -1;
+
     this.connection = null;
     
     this.networkComponent = null;
@@ -23,12 +30,38 @@ class App extends React.Component {
     this.setupCommunication();
 
     this.state = {
+      bucketSize: 50,
       latencies: [],
       nodes: [],
       links: [],
       ipHops: [],
-      packets: []
+      packets: [],
+      deliveryRatios: []
     };
+  }
+  
+  componentDidMount() {
+    this.bucketSizeElement.value = this.state.bucketSize;
+    this.bucketSizeElement.onchange = evt => {
+      this.setState({ bucketSize: parseInt(this.bucketSizeElement.value, 10) });
+    }    
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (!this.isLive && this.setStateManual) {
+      // do not store next state, reset setManual, re-render
+      this.setStateManual = false;
+      return true;
+    } else if (!this.isLive && !this.setStateManual) {
+      // store next state, but dont re-render
+      // (live state comes in while we are detached)
+      this.history.push(_.cloneDeep(nextState));
+      return false;
+    }
+
+    // we are live, store state and re-render
+    this.history.push(_.cloneDeep(nextState));
+    return true;
   }
 
   setupCommunication() {
@@ -84,7 +117,7 @@ class App extends React.Component {
         case 'P':
           /* packet command */
           if (command.mod === "sent") {
-            // packetSent(command.from, command.to, command.seqNum);
+            this.packetSent(command.from, command.to, command.seqNum);
           } else {
             // rec
             this.packetReceived(command.from, command.to, command.seqNum, command.latency);
@@ -103,6 +136,17 @@ class App extends React.Component {
           console.log('Unknown command', command.name);
           break;
       }
+    }
+  }
+
+  setTime(time) {
+    this.setStateManual = true;
+    if (time >= 0){
+      this.isLive = false;
+      this.setState(this.history[time]);
+    } else {
+      this.isLive = true;
+      this.setState(this.history[this.history.length-1]);
     }
   }
 
@@ -199,36 +243,58 @@ class App extends React.Component {
   //   }
   // }
 
-  packetReceived(from, to, seqNum, latency) {
-    if (latency > 0) {
-      const latencies = this.state.latencies.slice();
-      latencies.push(latency);
-
-      const packets = _.cloneDeep(this.state.packets);
-      packets.push({
-        from: from,
-        to: to,
-        seqNum: seqNum,
-        latency: latency
-      });
-
-      this.setState({
-        latencies: latencies,
-        packets: packets
-      });
-      
-      // let avg = this.latencies.reduce((a, b) => { return a + b }, 0) / this.latencies.length;
-      
-      if (this.networkComponent) {
-        this.networkComponent.highlightIPHop(from, to);
-      }
-
-      console.log("Latency:", latency);
+  packetSent(from, to, _seqNum) {
+    // const deliveryRatios = _.cloneDeep(this.state.deliveryRatios);
+    if (!this.deliveryRatios[from]) {
+      this.deliveryRatios[from] = {
+        sent: 1,
+        received: 0,
+        lastSeqNum: -1
+      };
+    } else {
+      this.deliveryRatios[from].sent++;
     }
-    // d3.select("#avg-latency").html(avg);
+  }
 
-    // addTableRow(from, to, seqNum, latency);
+  packetReceived(from, to, _seqNum, latency) {
+    if (latency < 0) {
+      return;
+    }
+    
+    const seqNum = parseInt(_seqNum, 10);
 
+    const latencies = this.state.latencies.slice();
+    latencies.push(latency);
+
+    const packets = _.cloneDeep(this.state.packets);
+    packets.push({
+      from: from,
+      to: to,
+      seqNum: seqNum,
+      latency: latency
+    });
+
+    // const deliveryRatios = _.cloneDeep(this.state.deliveryRatios);
+    // do not count duplicates
+    if (this.deliveryRatios[from] && this.deliveryRatios[from].lastSeqNum < seqNum) {
+      this.deliveryRatios[from].received++;
+      this.deliveryRatios[from].lastSeqNum = seqNum;
+    }
+
+    const deliveryRatios = Object.keys(this.deliveryRatios).length ? 
+        Object.keys(this.deliveryRatios).map(key => {
+          return Object.assign({ id: key }, this.deliveryRatios[key]);
+        }) : [];
+
+    this.setState({
+      latencies: latencies,
+      packets: packets,
+      deliveryRatios: deliveryRatios
+    });
+    
+    if (this.networkComponent) {
+      this.networkComponent.highlightIPHop(from, to);
+    }
   }
 
   // annotateDeliveryRatio(id, from, rec, exp) {
@@ -257,13 +323,19 @@ class App extends React.Component {
           </Tile>
         </Box>
         <Box p={1}>
-          <Tile title="Latency Histogram">
-            <Histogram values={this.state.latencies} />
+          <Tile title="Packet History">
+            <History packets={this.state.packets} />
           </Tile>
         </Box>
         <Box p={1}>
-          <Tile title="Packet History">
-            <History packets={this.state.packets} />
+          <Tile title="Delivery Ratio">
+            <StripChart deliveryRatios={this.state.deliveryRatios} />
+          </Tile>
+        </Box>
+        <Box p={1}>
+          <Tile title="Latency Histogram">
+            <Histogram values={this.state.latencies} bucketSize={this.state.bucketSize} />
+            <input type="number" step="5" min="0" ref={comp => { this.bucketSizeElement = comp; }}></input>
           </Tile>
         </Box>
       </Flex>
