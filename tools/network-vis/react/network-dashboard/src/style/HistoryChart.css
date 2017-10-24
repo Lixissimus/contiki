@@ -1,0 +1,37 @@
+circle.history-chart {
+  fill: steelblue
+}
+
+.history-chart.line {
+  fill: none;
+  stroke: #999;
+  stroke-width: 1px;
+}
+
+.history-chart.overlay {
+  fill: none;
+  stroke: none;
+  pointer-events: all;
+}
+
+.history-chart.focus-line {
+  fill: none;
+  stroke: #999;
+  stroke-width: 1px;
+  opacity: 0.5;
+}
+
+.history-chart.focus-circle {
+  fill: steelblue;
+  fill-opacity: 0.5;
+}
+
+.history-chart.lock-line {
+  fill: none;
+  stroke: #999;
+  stroke-width: 1px;
+}
+
+.history-chart.lock-circle {
+  fill: steelblue;
+}

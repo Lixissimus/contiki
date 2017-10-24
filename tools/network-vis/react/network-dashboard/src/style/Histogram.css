@@ -1,7 +1,3 @@
-svg {
-  /* background: #eee; */
-}
-
 .bar {
   fill: steelblue;
 }
@@ -10,6 +6,6 @@ svg {
   fill: brown;
 }
 
-.axis--x path {
+.histogram.axis--x path {
   display: none;
 }

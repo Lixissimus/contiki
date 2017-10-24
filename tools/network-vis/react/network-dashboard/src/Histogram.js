@@ -37,12 +37,12 @@ export default class Histogram extends React.Component {
         "transform", `translate(${this.margin.left}, ${this.margin.top})`);
     
     this.xAxis = this.d3Histogram.append("g")
-        .attr("class", "axis axis--x")
+        .attr("class", "axis axis--x histogram")
         .attr("transform", `translate(0, ${this.height})`);
     this.xAxis.call(d3.axisBottom(this.x));
     
     this.yAxis = this.d3Histogram.append("g")
-        .attr("class", "axis axis--y");
+        .attr("class", "axis axis--y histogram");
     this.yAxis.call(
         d3.axisLeft(this.y)
           .ticks(1)

@@ -33,6 +33,22 @@ export default class Network extends React.Component {
 
     this.color = d3.scaleOrdinal(d3.schemeCategory20);
 
+    this.props.subscribe("highlight-node", data => {
+      this.highlightNode(data.id);
+    });
+    this.props.subscribe("highlight-link", data => {
+      this.highlightLine(data.src, data.dst);
+    });
+    this.props.subscribe("highlight-ipHop", data => {
+      this.highlightIPHop(data.src, data.dst);
+    });
+    this.props.subscribe("annotate-rank", data => {
+      this.annotateRank(data.id, data.rank);
+    });
+    this.props.subscribe("annotate-dc", data => {
+      this.annotateDutyCycle(data.id, data.on, data.total);
+    });
+
   }
 
   componentDidMount() {
@@ -100,7 +116,7 @@ export default class Network extends React.Component {
           });
     }
     
-    if (ipHopsChanged) {
+    // if (ipHopsChanged) {
       // draw ipHops, but only if we have drawn root already
       if (!this.nodes.select("#node-1").empty()) {
         let ipHops = this.ipHops.selectAll("line").data(data.ipHops);
@@ -113,7 +129,7 @@ export default class Network extends React.Component {
               .attr("y2", d => { return this.nodes.select("#" + d.target).attr("cy"); })
               .style("opacity", 0);
       }
-    }
+    // }
 
     // if anything changed, update and re-charge simulation
     if (linksChanged || nodesChanged || ipHopsChanged) {

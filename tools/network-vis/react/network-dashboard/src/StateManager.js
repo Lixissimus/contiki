@@ -20,7 +20,8 @@ export default class StateManager {
       links: [],
       ipHops: [],
       packets: [],
-      deliveryRatios: []
+      deliveryRatios: [],
+      avgRatios: []
     };
   }
   
@@ -28,7 +29,7 @@ export default class StateManager {
     const newState = Object.assign({}, this.state, diff);
     this.history.push(newState);
     this.state = newState;
-
+    
     if (this.isLive) {
       this.dashboard.setState(newState);
     }
@@ -235,10 +236,22 @@ export default class StateManager {
           return Object.assign({ id: key }, this.deliveryRatios[key]);
         }) : [];
 
+    const avgRatio = Object.keys(this.deliveryRatios).reduce((prev, key) => {
+      return prev + this.deliveryRatios[key].received / this.deliveryRatios[key].sent;
+    }, 0) / Object.keys(this.deliveryRatios).length;
+
+    const avgRatios = _.cloneDeep(this.state.avgRatios);
+    avgRatios.push({
+      timestamp: window.performance.now(),
+      timeIndex: this.history.length,
+      ratio: avgRatio
+    });
+
     this.addState({
       latencies: latencies,
       packets: packets,
-      deliveryRatios: deliveryRatios
+      deliveryRatios: deliveryRatios,
+      avgRatios: avgRatios
     });
     
     if (this.isLive) {

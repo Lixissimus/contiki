@@ -13,7 +13,7 @@ export default class History extends React.Component {
   shouldComponentUpdate(nextProps, nextState) {
     const rows = this.tableBody.selectAll("tr").data(nextProps.packets);
     rows.exit().remove();
-    rows.enter().insert("tr", ":first-child")
+    rows.enter().append("tr")
         .html(d => {
           return (`
               <td>${d.from}</td>
@@ -23,9 +23,10 @@ export default class History extends React.Component {
           );
         });
 
-    const avg = Math.round(nextProps.packets.reduce((prev, elem) => {
-      return prev + elem.latency;
-    }, 0) / nextProps.packets.length * 100) / 100;
+    const avg = nextProps.packets.length === 0 ? 0 :
+        Math.round(nextProps.packets.reduce((prev, elem) => {
+          return prev + elem.latency;
+        }, 0) / nextProps.packets.length * 100) / 100;
 
     this.tableHead.selectAll("#average-field").data([avg])
         .html(d => { return d; });
