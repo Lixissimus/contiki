@@ -66,6 +66,10 @@
 
 #include <stdio.h>
 
+#include "lib/lladdr-id-mapping.h"
+#include <inttypes.h>
+#define ANNOTATE_L(src, dst) printf("#L %" PRIu16 " %" PRIu16 "\n", src, dst)
+
 #ifdef SECRDC_CONF_WITH_DOZING
 #define WITH_DOZING SECRDC_CONF_WITH_DOZING
 #else /* SECRDC_CONF_WITH_DOZING */
@@ -1594,7 +1598,7 @@ transmit(void)
     /* set strobe index */
     u.strobe.unsecured_frame[POTR_HEADER_LEN] = u.strobe.strobes;
     u.strobe.nonce[8] = u.strobe.strobes;
-#if POTR_CONF_WITH_ANYCAST
+#if POTR_CONF_WITH_ANYCAST && !POTR_CONF_OPP_UNICAST
     if(u.strobe.is_anycast) {
       /* recalculate otp with strobe idx */
       potr_recreate_otp(
@@ -1610,7 +1614,7 @@ transmit(void)
     }
 #else
     NETSTACK_RADIO_ASYNC.reprepare(POTR_HEADER_LEN, &u.strobe.strobes, 1);
-#endif /* POTR_CONF_WITH_ANYCAST */
+#endif /* POTR_CONF_WITH_ANYCAST && !POTR_CONF_OPP_UNICAST */
   }
 
 
@@ -1683,7 +1687,7 @@ on_strobed(void)
     PRINTF("secrdc: strobed anycast %i times, received %sack\n",
         u.strobe.strobes + 1,
         u.strobe.result == MAC_TX_OK ? "" : "no ");
-  } else 
+  } else
 #endif /* POTR_CONF_WITH_ANYCAST */
   if(!u.strobe.is_broadcast) {
     PRINTF("secrdc: strobed %i times with %s\n",
@@ -1691,6 +1695,16 @@ on_strobed(void)
         (u.strobe.result == MAC_TX_OK) ? "success" : "error");
   }
 #endif /* DEBUG */
+#if POTR_CONF_OPP_UNICAST
+  if(u.strobe.result == MAC_TX_OK && u.strobe.is_anycast) {
+    const linkaddr_t *addr;
+    uint16_t rec_id, own_id;
+    addr = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
+    rec_id = lladdr_id_mapping_id_from_ll(addr);
+    own_id = lladdr_id_mapping_own_id();
+    ANNOTATE_L(own_id, rec_id);
+  }
+#endif /* POTR_CONF_OPP_UNICAST */
   queuebuf_to_packetbuf(u.strobe.bf->qb);
   if(u.strobe.bf->allocated_qb) {
     queuebuf_free(u.strobe.bf->qb);
