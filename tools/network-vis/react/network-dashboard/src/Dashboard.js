@@ -1,5 +1,7 @@
 import React from 'react';
 
+import * as d3 from 'd3';
+
 import { Flex, Box } from 'reflexbox';
 
 import StateManager from './StateManager';
@@ -11,6 +13,8 @@ import Histogram from './Histogram';
 import History from './History';
 import StripChart from './StripChart';
 import HistoryChart from './HistoryChart';
+import Persistence from './Persistence';
+import PieGroup from './PieGroup';
 
 import './style/Dashboard.css';
 
@@ -25,9 +29,17 @@ export default class Dashboard extends React.Component {
       this.stateManager.setTime(data.time);
     });
 
+    this.eventQueue.subscribe("set-history", data => {
+      this.stateManager.setHistory(data.history);
+    });
+
+    this.eventQueue.subscribe("connect-ws", data => {
+      this.stateManager.setupCommunication(data.url);
+    })
+
     this.bucketSizeElement = null;
 
-    this.timeComponent = null;
+    this.color = d3.scaleOrdinal(d3.schemeCategory20);
 
     this.state = {
       bucketSize: 50,
@@ -45,6 +57,13 @@ export default class Dashboard extends React.Component {
     this.bucketSizeElement.onchange = evt => {
       this.setState({ bucketSize: parseInt(this.bucketSizeElement.value, 10) });
     }
+
+    d3.select("body").on("keydown", () => {
+      if (d3.event.keyCode === 27) {
+        // esc
+        this.eventQueue.post("esc-pressed", {});
+      }
+  });
   }
 
   annotateRank(id, rank) {
@@ -71,11 +90,21 @@ export default class Dashboard extends React.Component {
     return (
       <Flex align="center" wrap={true}>
         <Box p={1}>
+          <Tile title="Next Hops">
+            <PieGroup 
+                values={this.state.nextHops}
+                color={this.color}
+                post={this.eventQueue.post.bind(this.eventQueue)}
+                subscribe={this.eventQueue.subscribe.bind(this.eventQueue)} />
+          </Tile>
+        </Box>
+        <Box p={1}>
           <Tile title="Network Graph">
             <Network
                 nodes={this.state.nodes}
                 links={this.state.links}
                 ipHops={this.state.ipHops}
+                color={this.color}
                 post={this.eventQueue.post.bind(this.eventQueue)}
                 subscribe={this.eventQueue.subscribe.bind(this.eventQueue)} />
           </Tile>
@@ -92,6 +121,7 @@ export default class Dashboard extends React.Component {
           <Tile title="Delivery Ratio">
             <StripChart
                 deliveryRatios={this.state.deliveryRatios}
+                color={this.color}
                 post={this.eventQueue.post.bind(this.eventQueue)}
                 subscribe={this.eventQueue.subscribe.bind(this.eventQueue)} />
           </Tile>
@@ -107,10 +137,33 @@ export default class Dashboard extends React.Component {
           </Tile>
         </Box>
         <Box p={1}>
+          <Tile title="Persistence">
+            <Persistence
+                getData={() => { return this.stateManager.history; }}
+                post={this.eventQueue.post.bind(this.eventQueue)}
+                subscribe={this.eventQueue.subscribe.bind(this.eventQueue)} />
+          </Tile>
+        </Box>
+        <Box p={1}>
           <Tile title="Total Delivery Ratio">
             <HistoryChart
-                ref={comp => { this.timeComponent = comp; }}
                 values={this.state.avgRatios}
+                post={this.eventQueue.post.bind(this.eventQueue)}
+                subscribe={this.eventQueue.subscribe.bind(this.eventQueue)} />
+          </Tile>
+        </Box>
+        <Box p={1}>
+          <Tile title="Average Duty Cycle">
+            <HistoryChart
+                values={this.state.avgDutyCycles}
+                post={this.eventQueue.post.bind(this.eventQueue)}
+                subscribe={this.eventQueue.subscribe.bind(this.eventQueue)} />
+          </Tile>
+        </Box>
+        <Box p={1}>
+          <Tile title="Average Latency">
+            <HistoryChart
+                values={this.state.avgLatencies}
                 post={this.eventQueue.post.bind(this.eventQueue)}
                 subscribe={this.eventQueue.subscribe.bind(this.eventQueue)} />
           </Tile>

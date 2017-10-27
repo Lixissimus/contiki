@@ -25,13 +25,13 @@ export default class Network extends React.Component {
     this.width = this.svgWidth - this.margin.left - this.margin.right;
     this.height = this.svgHeight - this.margin.top - this.margin.bottom;
 
+    this.radius = 10;
+
     this.simulation = d3.forceSimulation()
         .force("link", d3.forceLink().id(d => { return d.id; }))
-        .force("charge", d3.forceManyBody().strength(d => { return -100; } ))
+        .force("charge", d3.forceManyBody().strength(d => { return -200; } ))
         .force("center", d3.forceCenter(this.svgWidth / 2, this.svgHeight / 2));
     this.simulation.on("tick", this.ticked.bind(this));
-
-    this.color = d3.scaleOrdinal(d3.schemeCategory20);
 
     this.props.subscribe("highlight-node", data => {
       this.highlightNode(data.id);
@@ -59,6 +59,7 @@ export default class Network extends React.Component {
         .attr("class", "ipHops");
     this.links = this.d3Network.append("g").attr("class", "links");
     this.nodes = this.d3Network.append("g").attr("class", "nodes");
+    this.labels = this.d3Network.append("g").attr("class", "labels");
 
     this.tooltip = this.container.append("div")
         .attr("class", "tooltip")
@@ -83,7 +84,7 @@ export default class Network extends React.Component {
 
 
     if (linksChanged) {
-      let links = this.links.selectAll("line").data(data.links);
+      const links = this.links.selectAll("line").data(data.links);
       links.exit().remove();
       links.enter().append("line")
           .attr("id", d => { return `${d.source}-${d.target}`; })
@@ -91,12 +92,12 @@ export default class Network extends React.Component {
     }
 
     if (nodesChanged) {
-      let nodes = this.nodes.selectAll("circle").data(data.nodes);
+      const nodes = this.nodes.selectAll("circle").data(data.nodes);
       nodes.exit().remove();
       nodes.enter().append("circle")
           .attr("id", d => { return d.id; })
-          .attr("r", 5)
-          .attr("fill", d => { return this.color(d.group); })
+          .attr("r", this.radius)
+          .attr("fill", d => { return this.props.color(d.id.split("-")[1]); })
           .call(d3.drag()
               .on("start", this.dragStarted.bind(this))
               .on("drag", this.dragged.bind(this))
@@ -114,6 +115,21 @@ export default class Network extends React.Component {
                 .duration(500)
                 .style("opacity", 0);
           });
+      nodes
+          .attr("id", d => { return d.id; })
+          .attr("fill", d => { return this.props.color(d.id.split("-")[1]); });
+
+      const labels = this.labels.selectAll("text").data(data.nodes);
+      labels.exit().remove();
+      labels.enter().append("text")
+          .attr("class", "node-label")
+          .attr("alignment-baseline", "middle")
+          .attr("pointer-events", "none")
+          .attr("id", d => { return `label-node-${d.id.split("-")[1]}`; })
+          .text(d => { return d.id.split("-")[1]; });
+      labels
+          .attr("id", d => { return `label-node-${d.id.split("-")[1]}`; })
+          .text(d => { return d.id.split("-")[1]; });
     }
     
     // if (ipHopsChanged) {
@@ -179,17 +195,20 @@ export default class Network extends React.Component {
     this.nodes.selectAll("circle")
         .attr("cx", d => { return d.x; })
         .attr("cy", d => { return d.y; });
+    this.labels.selectAll("text")
+        .attr("x", d => { return d.x; })
+        .attr("y", d => { return d.y+1; });
   }
 
   highlightNode(id) {
     this.nodes.select("#node-" + id)
         .transition()
           .duration(200)
-          .attr("r", 10)
+          .attr("r", this.radius + 5)
         .transition()
           .delay(600)
           .duration(500)
-          .attr("r", 5);
+          .attr("r", this.radius);
   }
 
   highlightLine(src, dst) {

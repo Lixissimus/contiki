@@ -6,22 +6,26 @@ export default class StateManager {
 
     this.history = [];
     this.deliveryRatios = {};
+    this.nextHops = {};
+    this.dutyCycles = {};
     this.isLive = true;
     this.time = -1;
 
     this.connection = null;
 
-    this.setupCommunication();
-
     this.state = {
       bucketSize: 50,
       latencies: [],
+      avgLatencies: [],
       nodes: [],
       links: [],
       ipHops: [],
       packets: [],
       deliveryRatios: [],
-      avgRatios: []
+      avgRatios: [],
+      nextHops: [],
+      dutyCycles: [],
+      avgDutyCycles: []
     };
   }
   
@@ -35,7 +39,7 @@ export default class StateManager {
     }
   }
 
-  setupCommunication() {
+  setupCommunication(ip) {
     // const connectButton = d3.select("#connect-button");
     // const ipField = d3.select("#ip-field");
 
@@ -47,7 +51,7 @@ export default class StateManager {
     //   }));
     // });
 
-    this.connection = new WebSocket('ws://127.0.0.1:8001');
+    this.connection = new WebSocket(`ws://${ip}`);
 
     this.connection.onopen = () => {
       console.log('Connection open!');
@@ -68,10 +72,8 @@ export default class StateManager {
           break;
         case 'L':
           /* line command */
-          if (this.isLive) {
-            this.dashboard.highlightLine(
-                parseInt(command.src, 10), parseInt(command.dst, 10));
-          }
+          this.linkLayerHop(
+              parseInt(command.src, 10), parseInt(command.dst, 10));
           break;
         case 'R':
           /* rank command */
@@ -100,6 +102,7 @@ export default class StateManager {
           break;
         case 'DC':
           /* duty cycle command */
+          this.dutyCycle(command.id, parseInt(command.dcOn, 10), parseInt(command.total, 10));
           if (this.isLive) {
             this.dashboard.annotateDutyCycle(command.id, parseInt(command.dcOn, 10), parseInt(command.total, 10));
           }
@@ -125,6 +128,11 @@ export default class StateManager {
       this.isLive = true;
       this.dashboard.setState(this.history[this.history.length-1]);
     }
+  }
+
+  setHistory(history) {
+    this.history = history;
+    this.dashboard.setState(history[history.length-1]);
   }
 
   addNode(_id) {
@@ -194,6 +202,67 @@ export default class StateManager {
     this.addState({ links: links });
   }
 
+  linkLayerHop(src, dst) {
+    if (!this.nextHops[src]) {
+      this.nextHops[src] = {};
+    }
+    if (!this.nextHops[src][dst]) {
+      this.nextHops[src][dst] = 1;
+    } else {
+      this.nextHops[src][dst]++;
+    }
+
+    const nextHops = Object.keys(this.nextHops).map(key => {
+      return {
+        id: key,
+        // is copying necessary here?
+        // hops: Object.assign({}, this.nextHops[key])
+        // hops: this.nextHops[key]
+        hops: Object.keys(this.nextHops[key]).map(dst => {
+          return {
+            dst: dst,
+            count: this.nextHops[key][dst]
+          }
+        })
+      }
+    });
+
+    this.addState({
+      nextHops: nextHops
+    });
+    
+    if (this.isLive) {
+      this.dashboard.highlightLine(src, dst);
+    }
+  }
+  
+  dutyCycle(id, on, total) {
+    // if (!this.dutyCycles[id]) {
+      this.dutyCycles[id] = on / total;
+    // }
+
+    const dutyCycles = _.cloneDeep(this.state.dutyCycles);
+    dutyCycles.push(Object.assign({}, this.dutyCycles));
+
+    const keys = Object.keys(this.dutyCycles)
+    const avg = keys.length ? 
+    keys.reduce((prev, key) => {
+      return prev += this.dutyCycles[key];
+    }, 0) / keys.length : 0;
+    
+    const avgDutyCycles = _.cloneDeep(this.state.avgDutyCycles);
+    avgDutyCycles.push({
+      timestamp: window.performance.now(),
+      timeIndex: this.history.length,
+      value: avg
+    });
+
+    this.addState({
+      dutyCycles: dutyCycles,
+      avgDutyCycles: avgDutyCycles
+    });
+  }
+
   packetSent(from, to, _seqNum) {
     if (!this.deliveryRatios[from]) {
       this.deliveryRatios[from] = {
@@ -215,6 +284,17 @@ export default class StateManager {
 
     const latencies = this.state.latencies.slice();
     latencies.push(latency);
+
+    const avgLatencies = _.cloneDeep(this.state.avgLatencies);
+    const avgLatency = latencies.reduce((prev, lat) => {
+      return prev + lat;
+    }, 0) / latencies.length;
+
+    avgLatencies.push({
+      timestamp: window.performance.now(),
+      timeIndex: this.history.length,
+      value: avgLatency
+    });
 
     const packets = _.cloneDeep(this.state.packets);
     packets.push({
@@ -244,11 +324,12 @@ export default class StateManager {
     avgRatios.push({
       timestamp: window.performance.now(),
       timeIndex: this.history.length,
-      ratio: avgRatio
+      value: avgRatio
     });
 
     this.addState({
       latencies: latencies,
+      avgLatencies: avgLatencies,
       packets: packets,
       deliveryRatios: deliveryRatios,
       avgRatios: avgRatios

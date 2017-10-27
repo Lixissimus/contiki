@@ -19,6 +19,12 @@ svg {
   stroke-width: 3px;
 }
 
+text.node-label {
+  text-anchor: middle;
+  text-align: center;
+  font-family: Helvetica;
+  font-size: 10px;
+}
 
 div.tooltip {	
   position: absolute;
