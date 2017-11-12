@@ -595,7 +595,7 @@ tcpip_ipv6_output(void)
     }
 #if ORPL_ENABLED
     else {
-#if TEST_DEPLOYMENT
+#if TEST_DEPLOYMENT && ORPL_CONF_LAST_HOP_UNICAST
       linkaddr_t dest_lladdr;
       if( lladdr_id_mapping_ll_from_ipv6(&UIP_IP_BUF->destipaddr, &dest_lladdr) &&
           akes_nbr_get_entry(&dest_lladdr))

@@ -123,8 +123,8 @@
 #define ORPL_CONF_DOWNWARD_ROUTES 0
 
 /* use opportunistic unicasts */
-// #undef POTR_CONF_OPP_UNICAST
-// #define POTR_CONF_OPP_UNICAST 1
+#undef POTR_CONF_OPP_UNICAST
+#define POTR_CONF_OPP_UNICAST 0
 #else
 /* set upwards routing only */
 #undef RPL_CONF_MOP

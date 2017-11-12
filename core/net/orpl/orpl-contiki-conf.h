@@ -43,8 +43,8 @@
 // #define WITH_ORPL 1
 
 /* EDC is the objective function used by ORPL */
-#undef RPL_CONF_OF
-#define RPL_CONF_OF rpl_of_edc
+// #undef RPL_CONF_OF
+// #define RPL_CONF_OF rpl_of_edc
 
 /* ORPL does not have such notion of min hop rank increase */
 #undef RPL_CONF_MIN_HOPRANKINC

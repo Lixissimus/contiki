@@ -73,7 +73,11 @@
 #endif
 
 #ifndef ORPL_CONF_MIN_PROGRESS
-#define ORPL_CONF_MIN_PROGRESS 20
+#define ORPL_CONF_MIN_PROGRESS 1
+#endif
+
+#ifndef ORPL_CONF_LAST_HOP_UNICAST
+#define ORPL_CONF_LAST_HOP_UNICAST 1
 #endif
 
 /* enable ORPL */

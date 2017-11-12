@@ -40,6 +40,8 @@
 #ifndef ORPL_H_
 #define ORPL_H_
 
+// #if ORPL_ENABLED
+
 #include "net/linkaddr.h"
 #include "net/ip/uip.h"
 #include "net/rpl/rpl.h"
@@ -85,5 +87,7 @@ void orpl_trickle_callback(rpl_instance_t *instance);
  * is a routing set, so that the desired callback function is called
  * after each transmission attempt */
 extern int sending_routing_set;
+
+// #endif /* ORPL_ENABLED */
 
 #endif /* ORPL_H_ */

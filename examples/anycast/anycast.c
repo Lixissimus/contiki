@@ -47,7 +47,11 @@
 #include "net/ip/uip.h"
 #include "net/ip/uip-debug.h"
 #include "net/ipv6/uip-ds6.h"
+#if ORPL_ENABLED
 #include "net/orpl/orpl.h"
+#else
+#include "net/rpl/rpl.h"
+#endif /* ORPL_ENABLED */
 #include "net/llsec/adaptivesec/akes-nbr.h"
 
 #include "lib/random.h"
@@ -87,8 +91,8 @@
 
 #define PERIODIC_SEND 1
 
-#define SEND_INTERVAL (60*CLOCK_SECOND)
-#define RANDOM_FRACTION (60*CLOCK_SECOND)
+#define SEND_INTERVAL (2*60*CLOCK_SECOND)
+#define RANDOM_FRACTION (2*60*CLOCK_SECOND)
 #define RANDOM_INTERVAL (SEND_INTERVAL - (RANDOM_FRACTION/2) \
                         + (random_rand() % RANDOM_FRACTION))
 
@@ -144,6 +148,16 @@ print_own_addresses(void)
       printf("\n");
     }
   }
+}
+/*---------------------------------------------------------------------------*/
+static uint16_t get_rank(void)
+{
+#if ORPL_ENABLED
+  return orpl_current_edc();
+#else
+  rpl_dag_t *dag = rpl_get_any_dag();
+  return dag == NULL ? 0xffff : dag->rank;
+#endif /* ORPL_ENABLED */
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -202,7 +216,7 @@ check_status(void *d)
   }
 
   /* yellow indicates not part of DODAG */
-  uint16_t rank = orpl_current_edc();
+  uint16_t rank = get_rank();
   if(rank < 0xffff) {
     leds_off(LEDS_YELLOW);
   } else {
@@ -351,11 +365,11 @@ PROCESS_THREAD(anycast_process, ev, data)
       if(akes_nbr_count(AKES_NBR_PERMANENT) <= 0) {
         printf("Node has no akes neighbors\n");
         continue;
-      } else if(orpl_current_edc() == 0xffff) {
+      } else if(get_rank() == 0xffff) {
         printf("Node is not in DODAG\n");
         continue;
       } else {
-        printf("current edc: %d\n", orpl_current_edc());
+        printf("current edc: %d\n", get_rank());
       }
       ANNOTATE_H(own_id);
 

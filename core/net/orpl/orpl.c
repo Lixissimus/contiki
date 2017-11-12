@@ -37,6 +37,8 @@
  *         Felix Wolff <lixissimus@gmail.com>
  */
 
+// #if ORPL_ENABLED
+
 #include "net/ipv6/uip-ds6.h"
 #include "net/packetbuf.h"
 #include "net/linkaddr.h"
@@ -139,7 +141,7 @@ orpl_should_receive()
     /* Todo: Enforce some minimal routing progress here */
     if(src_rank > orpl_current_edc() + ORPL_CONF_MIN_PROGRESS) {
       // PRINTF("ORPL: keep packet, routing upwards\n");
-      ANNOTATE_L(lladdr_id_mapping_own_id(), lladdr_id_mapping_id_from_ll(&addr));
+      ANNOTATE_L(lladdr_id_mapping_id_from_ll(&addr), lladdr_id_mapping_own_id());
       return ORPL_ROUTE_KEEP;
     } else {
       // PRINTF("ORPL: reject packet routing upwards\n");
@@ -326,3 +328,5 @@ orpl_init(uint8_t is_root)
       udp_received_routing_set);
 #endif /* ORPL_CONF_DOWNWARDS_ROUTES */
 }
+
+// #endif /* ORPL_ENABLED */
