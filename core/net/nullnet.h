@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Swedish Institute of Computer Science.
+ * Copyright (c) 2015, Hasso-Plattner-Institut.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,67 +25,23 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * This file is part of the Contiki operating system.
+ *
  */
 
-#include "contiki.h"
+/**
+ * \file
+ *         NETWORK driver that does nothing
+ * \author
+ *         Konrad Krentz <konrad.krentz@gmail.com>
+ */
+
+#ifndef NULLNET_H_
+#define NULLNET_H_
+
 #include "net/netstack.h"
-#include "net/ip/uip.h"
-#include "net/packetbuf.h"
-#include "dev/slip.h"
-#include "packetutils.h"
-#include <stdio.h>
 
-#define SLIP_END     0300
-#define SLIP_ESC     0333
-#define SLIP_ESC_END 0334
-#define SLIP_ESC_ESC 0335
+extern const struct network_driver nullnet_driver;
 
-#define DEBUG 0
-
-/*---------------------------------------------------------------------------*/
-void
-slipnet_init(void)
-{
-}
-/*---------------------------------------------------------------------------*/
-void
-slip_send_packet(const uint8_t *ptr, int len)
-{
-  uint16_t i;
-  uint8_t c;
-
-  slip_arch_writeb(SLIP_END);
-  for(i = 0; i < len; ++i) {
-    c = *ptr++;
-    if(c == SLIP_END) {
-      slip_arch_writeb(SLIP_ESC);
-      c = SLIP_ESC_END;
-    } else if(c == SLIP_ESC) {
-      slip_arch_writeb(SLIP_ESC);
-      c = SLIP_ESC_ESC;
-    }
-    slip_arch_writeb(c);
-  }
-  slip_arch_writeb(SLIP_END);
-}
-/*---------------------------------------------------------------------------*/
-void
-slipnet_input(void)
-{
-  uint8_t buf[PACKETUTILS_MAX_DATA_SIZE];
-  int16_t size;
-
-  size = packetutils_serialize(buf);
-  if(size < 0) {
-    return;
-  }
-
-  slip_send_packet(buf, size);
-}
-/*---------------------------------------------------------------------------*/
-const struct network_driver slipnet_driver = {
-  "slipnet",
-  slipnet_init,
-  slipnet_input
-};
-/*---------------------------------------------------------------------------*/
+#endif /* NULLNET_H_ */

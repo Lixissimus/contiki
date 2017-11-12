@@ -361,6 +361,7 @@ static rtimer_clock_t my_wake_up_counter_last_increment;
 #endif /* ILOS_ENABLED */
 #endif /* SECRDC_WITH_SECURE_PHASE_LOCK */
 
+/* Todo: are those still needed? */
 static rtimer_clock_t real_strobe_time;
 static rtimer_clock_t last_strobe_time;
 

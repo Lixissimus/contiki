@@ -104,6 +104,7 @@
 #define COAP_OBSERVE_CLIENT 1
 
 /* configure RDC layer */
+<<<<<<< HEAD
 #if 1
 #include "cpu/cc2538/dev/cc2538-rf-async-autoconf.h"
 #include "net/mac/contikimac/secrdc-autoconf.h"
@@ -118,6 +119,10 @@
 #undef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC nullrdc_driver
 #endif
+=======
+#include "cpu/cc2538/dev/cc2538-rf-async-autoconf.h"
+#include "net/mac/contikimac/secrdc-autoconf.h"
+>>>>>>> 06e7328efd04b39acf877b1be7fb0ad6734252cb
 
 /* configure MAC layer */
 #if 1
@@ -133,7 +138,6 @@
 #endif
 
 /* configure LLSEC layer */
-#if 1
 #undef ADAPTIVESEC_CONF_UNICAST_SEC_LVL
 #define ADAPTIVESEC_CONF_UNICAST_SEC_LVL 2
 #undef ADAPTIVESEC_CONF_BROADCAST_SEC_LVL
@@ -150,8 +154,7 @@
 #if 1
 #include "net/llsec/adaptivesec/potr-autoconf.h"
 #if 1
-#include "net/mac/contikimac/ilocs-autoconf.h"
-#endif
+#include "net/mac/contikimac/ilos-autoconf.h"
 #endif
 #endif
 

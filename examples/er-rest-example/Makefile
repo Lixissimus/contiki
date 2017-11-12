@@ -32,7 +32,6 @@ APPS += rest-engine
 #CUSTOM_RULE_S_TO_OBJECTDIR_O = 1
 
 MODULES += core/net/llsec/adaptivesec
-
 CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
 

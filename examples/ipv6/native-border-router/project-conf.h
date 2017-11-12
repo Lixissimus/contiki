@@ -69,7 +69,7 @@
 #if 1
 #include "net/llsec/adaptivesec/potr-autoconf.h"
 #if 1
-#include "net/mac/contikimac/ilocs-autoconf.h"
+#include "net/mac/contikimac/ilos-autoconf.h"
 #endif
 #endif
 /* configure FRAMERs */

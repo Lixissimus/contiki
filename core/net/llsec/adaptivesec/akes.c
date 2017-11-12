@@ -299,11 +299,8 @@ on_hello(uint8_t *payload)
 
   PRINTF("akes: Received HELLO\n");
 
+  akes_nbr_delete_expired_tentatives();
   entry = akes_nbr_get_sender_entry();
-  if(!akes_is_acceptable_hello(entry)) {
-    PRINTF("akes: Ignored HELLO\n");
-    return CMD_BROKER_ERROR;
-  }
 
   if(entry && entry->permanent) {
 #if ANTI_REPLAY_WITH_SUPPRESSION && !POTR_ENABLED
@@ -325,6 +322,16 @@ on_hello(uint8_t *payload)
       return CMD_BROKER_ERROR;
 #endif /* !POTR_ENABLED */
     }
+  }
+
+  if(leaky_bucket_is_full(&helloack_bucket)) {
+    PRINTF("akes: Bucket is full\n");
+    return CMD_BROKER_ERROR;
+  }
+
+  if(entry && entry->tentative) {
+    PRINTF("akes: Received HELLO from tentative neighbor\n");
+    return CMD_BROKER_ERROR;
   }
 
   /* Create tentative neighbor */

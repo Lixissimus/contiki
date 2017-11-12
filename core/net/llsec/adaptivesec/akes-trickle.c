@@ -118,6 +118,18 @@ akes_trickle_on_fresh_authentic_hello(struct akes_nbr *sender)
   }
 }
 /*---------------------------------------------------------------------------*/
+static void
+broadcast(void)
+{
+  PRINTF("akes-trickle: Broadcasting HELLO\n");
+  akes_broadcast_hello();
+  reset_trickle_info();
+  ctimer_set(&hello_timer,
+      (AKES_MAX_WAITING_PERIOD * CLOCK_SECOND + CLOCK_SECOND /* leeway */),
+      on_hello_done,
+      NULL);
+}
+/*---------------------------------------------------------------------------*/
 /* Corresponds to Rule 4 of Trickle */
 static void
 on_timeout(void *ptr)
@@ -127,13 +139,7 @@ on_timeout(void *ptr)
   } else if(!ctimer_expired(&hello_timer)) {
     PRINTF("akes-trickle: Still waiting for HELLOACKs\n");
   } else {
-    PRINTF("akes-trickle: Broadcasting HELLO\n");
-    akes_broadcast_hello();
-    reset_trickle_info();
-    ctimer_set(&hello_timer,
-        (AKES_MAX_WAITING_PERIOD * CLOCK_SECOND + CLOCK_SECOND /* leeway */),
-        on_hello_done,
-        NULL);
+    broadcast();
   }
 
   ctimer_set(&trickle_timer,
@@ -182,6 +188,9 @@ akes_trickle_stop(void)
 {
   PRINTF("akes-trickle: Stopping Trickle\n");
 
+  counter = 0;
+  new_nbrs_count = 0;
+  interval_size = 0;
   ctimer_stop(&trickle_timer);
   ctimer_stop(&hello_timer);
 }
@@ -208,9 +217,8 @@ akes_trickle_start(void)
   PRINTF("akes-trickle: Starting Trickle\n");
 
   akes_change_hello_challenge();
-  interval_size = get_random_time(IMIN, IMIN << IMAX);
-
-  on_timeout(NULL);
+  broadcast();
+  akes_trickle_reset();
 }
 /*---------------------------------------------------------------------------*/
 #else /* ENABLED */
