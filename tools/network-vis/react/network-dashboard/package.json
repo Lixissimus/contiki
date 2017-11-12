@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "bootstrap": "^3.3.7",
     "d3": "^4.11.0",
     "lodash": "^4.17.4",
     "react": "^16.0.0",

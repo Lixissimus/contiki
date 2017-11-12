@@ -252,7 +252,7 @@ export default class StateManager {
     
     const avgDutyCycles = _.cloneDeep(this.state.avgDutyCycles);
     avgDutyCycles.push({
-      timestamp: window.performance.now(),
+      timestamp: window.performance.now() / 1000,
       timeIndex: this.history.length,
       value: avg
     });
@@ -291,7 +291,7 @@ export default class StateManager {
     }, 0) / latencies.length;
 
     avgLatencies.push({
-      timestamp: window.performance.now(),
+      timestamp: window.performance.now() / 1000,
       timeIndex: this.history.length,
       value: avgLatency
     });
@@ -322,7 +322,7 @@ export default class StateManager {
 
     const avgRatios = _.cloneDeep(this.state.avgRatios);
     avgRatios.push({
-      timestamp: window.performance.now(),
+      timestamp: window.performance.now() / 1000,
       timeIndex: this.history.length,
       value: avgRatio
     });

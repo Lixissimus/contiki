@@ -110,10 +110,13 @@ export default class Network extends React.Component {
                   .style("left", (d3.event.pageX + 10) + "px")
                   .style("top", (d3.event.pageY - 28) + "px");
           })
-          .on("mouseout", d => {		
+          .on("mouseout", d => {
               this.tooltip.transition()
                 .duration(500)
                 .style("opacity", 0);
+          })
+          .on("click", d => {
+              this.props.post("node-select", { id: d.id.split("-")[1] });
           });
       nodes
           .attr("id", d => { return d.id; })

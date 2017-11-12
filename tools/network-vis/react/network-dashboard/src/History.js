@@ -5,13 +5,27 @@ import * as d3 from 'd3';
 import './style/History.css'
 
 export default class History extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.filterBy = null;
+  }
   componentDidMount() {
     this.tableHead = d3.select(ReactDOM.findDOMNode(this.refs.tableHead));
     this.tableBody = d3.select(ReactDOM.findDOMNode(this.refs.tableBody));
+
+    const _this = this;
+    this.props.subscribe("node-select", data => {
+      _this.filterBy = data.id;
+    });
+    this.props.subscribe("esc-pressed", data => {
+      _this.filterBy = null;
+    });
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    const rows = this.tableBody.selectAll("tr").data(nextProps.packets);
+    const data = this.filter(nextProps.packets);
+    const rows = this.tableBody.selectAll("tr").data(data);
     rows.exit().remove();
     rows.enter().append("tr")
         .html(d => {
@@ -22,16 +36,34 @@ export default class History extends React.Component {
               <td>${Math.round(d.latency*100) / 100}</td>`
           );
         });
+    rows.html(d => {
+      return (`
+          <td>${d.from}</td>
+          <td>${d.to}</td>
+          <td>${d.seqNum}</td>
+          <td>${Math.round(d.latency*100) / 100}</td>`
+      );
+    });
 
-    const avg = nextProps.packets.length === 0 ? 0 :
-        Math.round(nextProps.packets.reduce((prev, elem) => {
+    const avg = data.length === 0 ? 0 :
+        Math.round(data.reduce((prev, elem) => {
           return prev + elem.latency;
-        }, 0) / nextProps.packets.length * 100) / 100;
+        }, 0) / data.length * 100) / 100;
 
     this.tableHead.selectAll("#average-field").data([avg])
         .html(d => { return d; });
 
     return false;
+  }
+
+  filter(packets) {
+    if (!this.filterBy) {
+      return packets;
+    }
+
+    return packets.filter(packet => {
+      return packet.from === this.filterBy;
+    });
   }
 
   render() {
