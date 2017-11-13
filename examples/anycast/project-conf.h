@@ -122,6 +122,12 @@
 #undef ORPL_CONF_DOWNWARD_ROUTES
 #define ORPL_CONF_DOWNWARD_ROUTES 0
 
+#undef ORPL_CONF_LAST_HOP_UNICAST
+#define ORPL_CONF_LAST_HOP_UNICAST 1
+
+#undef ORPL_HC_EDC
+#define ORPL_HC_EDC 1
+
 /* use opportunistic unicasts */
 #undef POTR_CONF_OPP_UNICAST
 #define POTR_CONF_OPP_UNICAST 0
