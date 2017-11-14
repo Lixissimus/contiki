@@ -114,6 +114,13 @@ export default class StateManager {
     }
   }
 
+  connectRemote(ip) {
+    this.connection.send(JSON.stringify({
+      type: "connect",
+      ip: ip
+    }));
+  }
+
   setTime(time) {
     if (time >= this.history.length) {
       // out of range

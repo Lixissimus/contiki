@@ -4,6 +4,7 @@
   font-family: Helvetica;
   width: 450px;
   max-height: 300px;
+  overflow: auto;
 }
 
 th {

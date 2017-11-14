@@ -112,7 +112,7 @@ wss.on('connection', _ws => {
                     command.latency = packetReceived(command.from, command.to, command.seqNum);
                   } else {
                     // sent
-                    packetSent(command.from, command.to, command.seqNum);
+                    command.timestamp = packetSent(command.from, command.to, command.seqNum);
                     command.mod = "sent";
                   }
                   break;

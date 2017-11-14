@@ -35,7 +35,11 @@ export default class Dashboard extends React.Component {
 
     this.eventQueue.subscribe("connect-ws", data => {
       this.stateManager.setupCommunication(data.url);
-    })
+    });
+    
+    this.eventQueue.subscribe("connect-remote", data => {
+      this.stateManager.connectRemote(data.url);
+    });
 
     this.bucketSizeElement = null;
 

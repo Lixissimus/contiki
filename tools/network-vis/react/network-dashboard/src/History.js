@@ -13,6 +13,7 @@ export default class History extends React.Component {
   componentDidMount() {
     this.tableHead = d3.select(ReactDOM.findDOMNode(this.refs.tableHead));
     this.tableBody = d3.select(ReactDOM.findDOMNode(this.refs.tableBody));
+    this.tableContainer = this.refs.tableContainer;
 
     const _this = this;
     this.props.subscribe("node-select", data => {
@@ -26,6 +27,8 @@ export default class History extends React.Component {
   shouldComponentUpdate(nextProps, nextState) {
     const data = this.filter(nextProps.packets);
     const rows = this.tableBody.selectAll("tr").data(data);
+    const isScrolledDown = this.tableContainer.scrollTop === this.tableContainer.scrollHeight - this.tableContainer.clientHeight;
+
     rows.exit().remove();
     rows.enter().append("tr")
         .html(d => {
@@ -53,6 +56,10 @@ export default class History extends React.Component {
     this.tableHead.selectAll("#average-field").data([avg])
         .html(d => { return d; });
 
+    if (isScrolledDown) {
+      this.tableContainer.scrollTop = Number.MAX_SAFE_INTEGER;
+    }
+
     return false;
   }
 
@@ -68,7 +75,7 @@ export default class History extends React.Component {
 
   render() {
     return (
-      <div className="table-container">
+      <div className="table-container" ref="tableContainer">
         <table>
           <thead ref="tableHead">
             <tr>

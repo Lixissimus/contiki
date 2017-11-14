@@ -8,6 +8,7 @@ export default class Persistence extends React.Component {
     this.downloadLink = null;
     this.fileInput = null;
     this.ipInput = null;
+    this.ipRemoteInput = null;
   }
 
   load() {
@@ -41,6 +42,10 @@ export default class Persistence extends React.Component {
     this.props.post("connect-ws", { url: this.ipInput.value });
   }
 
+  connectRemote() {
+    this.props.post("connect-remote", { url: this.ipRemoteInput.value });
+  }
+
   render() {
     return (
       <div>
@@ -71,6 +76,18 @@ export default class Persistence extends React.Component {
               className="persistence button"
               onClick={this.connect.bind(this)} >
             Connect
+          </button>
+        </div>
+        <div style={{display: "block"}}>
+          <input
+              ref={comp => { this.ipRemoteInput = comp }}
+              type="text"
+              id="ipInput"
+              defaultValue="10.42.0.199" />
+          <button
+              className="persistence button"
+              onClick={this.connectRemote.bind(this)} >
+            Connect Remote
           </button>
         </div>
       </div>
