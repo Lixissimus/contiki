@@ -26,14 +26,18 @@
         {
             "name": "Linux",
             "includePath": [
+                "/usr/lib/gcc/arm-none-eabi/4.9.3/include",
                 "/usr/include/c++/5",
                 "/usr/include/x86_64-linux-gnu/c++/5",
                 "/usr/include/newlib/c++/4.9.3",
                 "/usr/local/include",
                 "/usr/include",
-                "/usr/include/x86_64-linux-gnu",
                 "/usr/include/newlib",
-                "${workspaceRoot}"
+                "${workspaceRoot}",
+                "${workspaceRoot}/cpu/arm/common/CMSIS",
+                "${workspaceRoot}/cpu/cc2538",
+                "${workspaceRoot}/platform/openmote-cc2538",
+                "${workspaceRoot}/core"
             ],
             "defines": [],
             "intelliSenseMode": "clang-x64",

@@ -122,6 +122,9 @@
 #undef ORPL_CONF_DOWNWARD_ROUTES
 #define ORPL_CONF_DOWNWARD_ROUTES 0
 
+#undef ORPL_CONF_MIN_PROGRESS
+#define ORPL_CONF_MIN_PROGRESS 12
+
 #undef ORPL_CONF_LAST_HOP_UNICAST
 #define ORPL_CONF_LAST_HOP_UNICAST 1
 
@@ -130,7 +133,7 @@
 
 /* use opportunistic unicasts */
 #undef POTR_CONF_OPP_UNICAST
-#define POTR_CONF_OPP_UNICAST 0
+#define POTR_CONF_OPP_UNICAST 1
 #else
 /* set upwards routing only */
 #undef RPL_CONF_MOP
