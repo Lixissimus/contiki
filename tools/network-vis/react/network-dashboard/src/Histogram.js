@@ -9,12 +9,12 @@ export default class Histogram extends React.Component {
     super(props);
 
     this.svgWidth = 960;
-    this.svgHeight = 300;
+    this.svgHeight = 400;
 
     this.margin = {
       top: 20,
       right: 20,
-      bottom: 60,
+      bottom: 100,
       left: 40
     }
 

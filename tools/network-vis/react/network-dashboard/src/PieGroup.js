@@ -12,7 +12,7 @@ export default class PieGroup extends React.Component {
     this.chartGroup = null;
 
     this.svgWidth = 900;
-    this.svgHeight = 300;
+    this.svgHeight = 600;
 
     this.margin = {
       top: 20,

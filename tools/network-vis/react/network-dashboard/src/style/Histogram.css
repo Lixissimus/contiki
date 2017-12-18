@@ -9,3 +9,7 @@
 .histogram.axis--x path {
   display: none;
 }
+
+text {
+  font-size: medium;
+}

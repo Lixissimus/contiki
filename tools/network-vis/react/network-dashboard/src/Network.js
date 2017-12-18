@@ -12,7 +12,7 @@ export default class Network extends React.Component {
 
     this.data = [];
 
-    this.svgWidth = 600;
+    this.svgWidth = 450;
     this.svgHeight = 300;
 
     this.margin = {

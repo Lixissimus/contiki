@@ -11,7 +11,6 @@ wss.on('connection', _ws => {
   const children = [];
 
   ws.on('message', message => {
-    console.log('received: %s', message);
     const parsed = JSON.parse(message);
 
     switch (parsed.type) {
@@ -168,8 +167,13 @@ function packetReceived(_from, _to, seqNum) {
   let t = now();
   let from = parseInt(_from);
   let to = parseInt(_to);
-  if (isNaN(from) || isNaN(to) || !sentTimes[`${from}-${to}-${seqNum}`]) {
+  if (isNaN(from) || isNaN(to)) {
     return -1;
+  }
+
+  if (!sentTimes[`${from}-${to}-${seqNum}`]) {
+    // that was faster than network! assume 10ms
+    return 10;
   }
 
   const lat =  t - sentTimes[`${from}-${to}-${seqNum}`];
