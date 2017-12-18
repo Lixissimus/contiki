@@ -39,7 +39,7 @@
 
 #define MAIN_DEBUG_CONF 0
 
-#define NETWORK_HARDCODED 1
+#define NETWORK_HARDCODED 0
 
 #if 0
 /* enable the software implementation of AES-128 */
@@ -113,7 +113,9 @@
 /* set low transmission power for multihop network simulation */
 #undef CC2538_RF_CONF_TX_POWER
 // #define CC2538_RF_CONF_TX_POWER 0x00
+// #define CC2538_RF_CONF_TX_POWER 0x10
 #define CC2538_RF_CONF_TX_POWER 0x42
+// #define CC2538_RF_CONF_TX_POWER 0x88
 
 /* configure routing */
 #if 1
@@ -126,14 +128,14 @@
 #define ORPL_CONF_MIN_PROGRESS 12
 
 #undef ORPL_CONF_LAST_HOP_UNICAST
-#define ORPL_CONF_LAST_HOP_UNICAST 1
+#define ORPL_CONF_LAST_HOP_UNICAST 0
 
 #undef ORPL_HC_EDC
 #define ORPL_HC_EDC 1
 
 /* use opportunistic unicasts */
 #undef POTR_CONF_OPP_UNICAST
-#define POTR_CONF_OPP_UNICAST 1
+#define POTR_CONF_OPP_UNICAST 0
 #else
 /* set upwards routing only */
 #undef RPL_CONF_MOP

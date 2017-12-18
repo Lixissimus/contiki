@@ -97,7 +97,7 @@
 #ifdef SECRDC_CONF_PHASE_LOCK_FREQ_TOLERANCE
 #define PHASE_LOCK_FREQ_TOLERANCE SECRDC_CONF_PHASE_LOCK_FREQ_TOLERANCE
 #else /* SECRDC_CONF_PHASE_LOCK_FREQ_TOLERANCE */
-#define PHASE_LOCK_FREQ_TOLERANCE (1)
+#define PHASE_LOCK_FREQ_TOLERANCE (2)
 #endif /* SECRDC_CONF_PHASE_LOCK_FREQ_TOLERANCE */
 
 #ifdef SECRDC_CONF_WITH_INTRA_COLLISION_AVOIDANCE
@@ -171,7 +171,8 @@
 #define FIFOP_THRESHOLD (POTR_ENABLED \
     ? (POTR_HEADER_LEN - POTR_OTP_LEN) \
     : (FRAMER_802154_MIN_BYTES_FOR_FILTERING))
-#define INITIAL_FLOOR_NOISE (-85)
+// #define INITIAL_FLOOR_NOISE (-85) // 171
+#define INITIAL_FLOOR_NOISE (-80) // 176
 #define SIGNAL_NOISE_DIFF (3)
 #define MAX_SIGNAL_VARIATION (3)
 #define CCA_HYSTERESIS (12)
@@ -1124,6 +1125,7 @@ PROCESS_THREAD(post_processing, ev, data)
             continue;
           }
 #else 
+          // u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE + (random_rand() % 125);
           u.strobe.strobe_start = RTIMER_NOW() + ILOS_MIN_TIME_TO_STROBE;
 #endif /* POTR_CONF_OPP_UNICAST */
           u.strobe.acknowledgement_len = ACKNOWLEDGEMENT_LEN;
@@ -1688,6 +1690,7 @@ on_strobed(void)
     PRINTF("secrdc: strobed anycast %i times, received %sack\n",
         u.strobe.strobes + 1,
         u.strobe.result == MAC_TX_OK ? "" : "no ");
+    
   } else
 #endif /* POTR_CONF_WITH_ANYCAST */
   if(!u.strobe.is_broadcast) {

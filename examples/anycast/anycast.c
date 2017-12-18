@@ -64,9 +64,11 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "net/ipv6/sicslowpan.h"
+
 #define SERVICE_ID 112
 #define UDP_PORT 1234
-#define NETWORK_SIZE 11
+#define NETWORK_SIZE 20
 #define ROOT_ID 1
 
 #define DEBUG 1
@@ -89,10 +91,10 @@
 #define ANNOTATE_DC(id, enum, divi)
 #endif
 
-#define PERIODIC_SEND 1
+#define PERIODIC_SEND 0
 
-#define SEND_INTERVAL (2*60*CLOCK_SECOND)
-#define RANDOM_FRACTION (2*60*CLOCK_SECOND)
+#define SEND_INTERVAL (20*CLOCK_SECOND)
+#define RANDOM_FRACTION (20*CLOCK_SECOND)
 #define RANDOM_INTERVAL (SEND_INTERVAL - (RANDOM_FRACTION/2) \
                         + (random_rand() % RANDOM_FRACTION))
 
@@ -106,7 +108,7 @@ static struct ctimer nbr_timer;
 #endif
 
 /* experiment setup */
-#define STARTUP_DELAY (5*CLOCK_SECOND)
+#define STARTUP_DELAY (5*60*CLOCK_SECOND)
 #define EXP_RUNTIME (500*60*CLOCK_SECOND)
 #define SHUTDOWN_DELAY (1*CLOCK_SECOND)
 
@@ -267,6 +269,7 @@ PROCESS_THREAD(anycast_process, ev, data)
 {
   static struct simple_udp_connection anycast_connection;
   uint8_t i;
+  static uint8_t cnt;
   
   PROCESS_BEGIN();
 
@@ -333,6 +336,7 @@ PROCESS_THREAD(anycast_process, ev, data)
 #endif
 
   static uint32_t msg_idx = 0;
+  cnt = 0;
 
   while(1) {
 #if PERIODIC_SEND
@@ -343,9 +347,12 @@ PROCESS_THREAD(anycast_process, ev, data)
 #endif
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, RANDOM_INTERVAL);
-    print_metrics();
+    cnt++;
+    if(cnt % 3 == 0) {
+      print_metrics();
+    }
     // if(own_id == ROOT_ID || (own_id != 4 && own_id != 8)) {
-    if(own_id == ROOT_ID) {
+    if(own_id == ROOT_ID || own_id != 2) {
       continue;
     }
 #else

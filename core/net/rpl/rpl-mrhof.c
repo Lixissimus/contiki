@@ -166,59 +166,93 @@ parent_path_cost(rpl_parent_t *p)
 }
 /*---------------------------------------------------------------------------*/
 static rpl_rank_t
-rank_via_parent(rpl_parent_t *p)
+rank_via_parent(rpl_parent_t *parent)
 {
   uint16_t min_hoprankinc;
   uint16_t path_cost;
 
 #if ORPL_HC_EDC
-  rpl_parent_t *nbr;
+  rpl_parent_t *nbr, *curr_p, *p;
   rpl_dag_t *dag;
   uint16_t nom_sum, p_rank_sum, single_hop_edc_10, link_metric, nom, fwd_avg_10, edc, own_rank;
+  uint16_t last_used_rank, min_rank, tentative_edc;
 
-  nbr = nbr_table_head(rpl_parents);
-  // printf("\ncalc edc using:\n");
+  p = nbr_table_head(rpl_parents);
+  if(p == NULL) {
+    /* not a single neighbor */
+    return 0xffff;
+  }
+
   dag = rpl_get_any_dag();
   own_rank = dag == NULL ? 0xffff : dag->rank;
 
   nom_sum = 0;
   p_rank_sum = 0;
-  while(nbr != NULL) {
+  last_used_rank = 1;
+  edc = 0xffff;
+  while(1) {
+    curr_p = NULL;
+    min_rank = 0xffff;
+    /* find next neighbor with increasing rank */
+    do {
+      if(
+        /* todo: what about root neighbor with rank 0? */
+        (p->rank > last_used_rank || (p->rank == 0 && last_used_rank == 1)) &&
+        (p->rank < min_rank)
+      ) {
+        curr_p = p;
+        min_rank = p->rank;
+      }
+      p = nbr_table_next(rpl_parents, p);
+    } while(p != NULL);
+
+    if(curr_p == NULL) {
+      /* we went through all neighbors */
+      break;
+    }
+
+    last_used_rank = curr_p->rank;
+
     // only include nodes with lower rank than own
     // Todo: sort neighbors by rank, add only those that improve edc
-    if(nbr->rank < own_rank) {
-      link_metric = parent_link_metric(nbr);
+    // if(nbr->rank < own_rank) {
+    link_metric = parent_link_metric(curr_p);
 
-      nom = (EDC_DIVISOR * 10 / link_metric) * EDC_DIVISOR / 10;
-      p_rank_sum += ((nom * 10 / EDC_DIVISOR) * nbr->rank) / 10;
-      nom_sum += nom;
+    nom = (EDC_DIVISOR * 10 / link_metric) * EDC_DIVISOR / 10;
+    p_rank_sum += ((nom * 10 / EDC_DIVISOR) * curr_p->rank) / 10;
+    nom_sum += nom;
 
       // printf("parent with rank %" PRIu16 ", cost %" PRIu16 "\n", nbr->rank, link_metric);
+    // }
+    // nbr = nbr_table_next(rpl_parents, nbr);
+    single_hop_edc_10 = EDC_DIVISOR * 10 / nom_sum;
+    fwd_avg_10 = (p_rank_sum * 10) / (100 / single_hop_edc_10);
+    /* single hop + weighted parent avg + some forwarding cost */
+    tentative_edc = (single_hop_edc_10 * EDC_DIVISOR / 10) + (fwd_avg_10) + (EDC_DIVISOR / 10);
+    if(tentative_edc < edc) {
+      edc = tentative_edc;
     }
-    nbr = nbr_table_next(rpl_parents, nbr);
   }
-  single_hop_edc_10 = EDC_DIVISOR * 10 / nom_sum;
-  fwd_avg_10 = (p_rank_sum * 10) / (100 / single_hop_edc_10);
-  /* single hop + weighted parent avg + some forwarding cost */
-  edc = (single_hop_edc_10 * EDC_DIVISOR / 10) + (fwd_avg_10) + (EDC_DIVISOR / 10);
+
 
   // printf("edc: %" PRIu16 ", (%" PRIu16 " + %" PRIu16 ")\n\n", edc, single_hop_edc_10, fwd_avg_10);
 
   // printf("single hop edc*10: %" PRIu16 "\n", single_hop_edc_10);
-  return MIN(edc, 0xffff);
+  return edc;
+  // return MIN(edc, 0xffff);
 #endif /* ORPL_HC_EDC */
 
   
   
-  if(p == NULL || p->dag == NULL || p->dag->instance == NULL) {
+  if(parent == NULL || parent->dag == NULL || parent->dag->instance == NULL) {
     return INFINITE_RANK;
   }
   
-  min_hoprankinc = p->dag->instance->min_hoprankinc;
-  path_cost = parent_path_cost(p);
+  min_hoprankinc = parent->dag->instance->min_hoprankinc;
+  path_cost = parent_path_cost(parent);
 
   /* Rank lower-bound: parent rank + min_hoprankinc */
-  return MAX(MIN((uint32_t)p->rank + min_hoprankinc, 0xffff), path_cost);
+  return MAX(MIN((uint32_t)parent->rank + min_hoprankinc, 0xffff), path_cost);
 }
 /*---------------------------------------------------------------------------*/
 static int
